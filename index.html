@@ -36,7 +36,9 @@
   .toolbar{
     display:flex; align-items:center; gap:14px; margin-top:18px;
     font-family:system-ui, sans-serif; font-size:12.5px; color:var(--fog);
+    flex-wrap:wrap;
   }
+  .toolbar.collapsed{ display:none; }
   .toolbar label{ display:flex; align-items:center; gap:7px; cursor:pointer; user-select:none; }
   .toolbar input[type=checkbox]{ accent-color:var(--brass); width:15px; height:15px; }
   .toolbar .hint{ color:var(--fog); opacity:.8; }
@@ -48,9 +50,20 @@
     margin:0 auto;
     line-height:0;
     touch-action:none;
+    transform-origin:50% 50%;
   }
   #stage img{ width:100%; display:block; border-radius:6px; box-shadow:0 30px 90px rgba(0,0,0,.55);
     -webkit-user-drag:none; user-drag:none; -webkit-user-select:none; user-select:none; touch-action:none; }
+
+  #zoomIndicator{
+    position:absolute; top:10px; right:10px; z-index:20;
+    background:rgba(10,19,25,.82); border:1px solid rgba(192,138,62,.5); border-radius:7px;
+    color:var(--parchment); font-family:system-ui,sans-serif; font-size:11.5px;
+    padding:6px 10px; cursor:pointer; display:none; align-items:center; gap:6px;
+    box-shadow:0 4px 14px rgba(0,0,0,.4);
+  }
+  #zoomIndicator:hover{ background:rgba(192,138,62,.28); }
+  #zoomIndicator .zoom-reset{ color:var(--fog); }
 
   #linkOverlay{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:8; }
   #linkOverlay .hover-line-dyn{ opacity:0.9; }
@@ -270,6 +283,23 @@
   .editform textarea{ min-height:70px; }
   .editform .row2{ display:flex; gap:10px; }
   .editform .row2 > *{ flex:1; }
+  .ef-toggle{
+    display:flex; align-items:center; gap:7px; width:100%; margin:18px 0 4px;
+    background:rgba(192,138,62,.1); border:1px solid rgba(192,138,62,.4); border-radius:7px;
+    color:var(--parchment); font-family:system-ui,sans-serif; font-size:12.5px; font-weight:600;
+    padding:9px 12px; cursor:pointer; text-align:left; letter-spacing:.02em;
+  }
+  .ef-toggle:hover{ background:rgba(192,138,62,.2); }
+  .ef-toggle .caret{ display:inline-block; transition:transform .18s ease; color:var(--brass); }
+  .ef-toggle.open .caret{ transform:rotate(90deg); }
+  .ef-toggle.subtle{
+    width:auto; margin:14px 0 0; padding:4px 7px; background:transparent; border:1px solid transparent;
+    opacity:.45; transition:opacity .15s ease, background .15s ease, border-color .15s ease;
+  }
+  .ef-toggle.subtle .caret{ color:var(--fog); font-size:11px; }
+  .ef-toggle.subtle:hover{ opacity:1; background:rgba(192,138,62,.12); border-color:rgba(192,138,62,.3); }
+  .ef-details{ display:none; }
+  .ef-details.open{ display:block; }
   .media-item{
     display:flex; align-items:center; gap:8px; background:rgba(0,0,0,.2); border:1px solid rgba(143,163,173,.2);
     border-radius:7px; padding:7px 9px; margin-top:8px; font-size:12.5px;
@@ -280,6 +310,15 @@
   .add-media-row{ display:flex; gap:6px; margin-top:6px; }
   .hint-line{ font-family:system-ui,sans-serif; font-size:11px; color:var(--fog); margin-top:5px; line-height:1.4; }
   .hint-line a{ color:var(--verdigris); }
+  .alt-pov-check{
+    display:flex; align-items:flex-start; gap:7px; margin-top:8px; cursor:pointer; user-select:none;
+    font-family:system-ui,sans-serif; font-size:11.5px; color:var(--fog); line-height:1.4;
+  }
+  .alt-pov-check input{ accent-color:var(--brass); margin-top:2px; flex-shrink:0; }
+  .alt-pov-badge{
+    display:inline-block; font-family:system-ui,sans-serif; font-size:10px; font-weight:600;
+    color:var(--ink); background:var(--fog); padding:1px 6px; border-radius:4px; margin-left:5px;
+  }
   .add-media-row input, .add-media-row select{ flex:1; min-width:0; }
   .add-media-row button, .editform .fileBtn{
     background:var(--brass); color:var(--ink); border:none; border-radius:6px; padding:8px 12px;
@@ -306,11 +345,16 @@
   <h1 class="display">Worlds Adrift <span>Timeline</span></h1>
   <p class="note">
     This is your original chart, pixel for pixel — no redraw. Hover any named crew or event to see it pop out;
-    click it to open its videos, screenshots, and write-up. In <b>Edit mode</b>, click any box to rename it,
-    write a description, paste YouTube/Twitch links, upload screenshots, or <b>link it to another hotspot</b>
-    (e.g. a crew and the crew it split from) — hovering either one glows both.
+    click it to open its videos, screenshots, and write-up. Hovering a crew also draws lines to everyone it's
+    fought — thicker, larger, and redder the more times they've clashed. <b>Ctrl + scroll</b> to zoom in on any
+    part of the chart. In <b>Edit mode</b>, click any box to rename it, write a description, paste YouTube/Twitch
+    links, upload screenshots, or <b>link it to another hotspot</b> (e.g. a crew and the crew it split from) —
+    hovering either one glows both.
   </p>
-  <div class="toolbar">
+  <button type="button" class="ef-toggle subtle" id="toolbarToggle" aria-label="Chart editing tools" title="Chart editing tools">
+    <span class="caret">▶</span>
+  </button>
+  <div class="toolbar collapsed" id="toolbar">
     <button id="editToggle" class="primary">✎ Edit positions</button>
     <button id="addWipeLineBtn">＋ Add wipe line</button>
     <button id="applyWipeLinesBtn">✂ Apply wipe lines to all crews</button>
@@ -335,6 +379,7 @@
   <div id="stage">
     <img id="chartImg" src="WATimeline.png" alt="Worlds Adrift Timeline chart" draggable="false" ondragstart="return false;" />
     <svg id="linkOverlay" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+    <div id="zoomIndicator" title="Click to reset zoom"><span id="zoomIndicatorPct">100%</span><span class="zoom-reset">· reset</span></div>
   </div>
 </div>
 
@@ -344,9 +389,14 @@
     <div class="panel-eyebrow" id="panelEra"></div>
     <h3 id="panelName"></h3>
     <div class="panel-dates" id="panelDates"></div>
-    <div class="panel-desc" id="panelDesc"></div>
-    <div class="panel-desc" id="panelMembers"></div>
-    <div class="panel-desc" id="panelLink"></div>
+    <button type="button" class="ef-toggle" id="panelToggleDetails" style="display:none;">
+      <span class="caret">▶</span><span>Description &amp; details</span>
+    </button>
+    <div class="ef-details" id="panelDetails">
+      <div class="panel-desc" id="panelDesc"></div>
+      <div class="panel-desc" id="panelMembers"></div>
+      <div class="panel-desc" id="panelLink"></div>
+    </div>
     <div id="panelVideoTabs" class="video-tabs"></div>
     <div class="video-grid" id="panelVideos"></div>
     <div id="panelImagesHeading" class="panel-subheading" style="display:none;">Screenshots</div>
@@ -364,6 +414,8 @@
 
   <label for="efEra">Era / group</label>
   <input type="text" id="efEra">
+
+  <div class="ef-details open" id="efDetails">
 
   <label for="efDesc">Description</label>
   <textarea id="efDesc" placeholder="What happened here, who was involved, notable moments…"></textarea>
@@ -395,6 +447,10 @@
     <button id="efMediaAdd">Add</button>
   </div>
   <div class="hint-line">Only shows crews from this box's own wipe — set the "Era" field above first if the list looks empty.</div>
+  <label class="alt-pov-check">
+    <input type="checkbox" id="efMediaAltPerspective">
+    Another crew's POV of a fight already counted elsewhere — keep the video, but leave it out of the fight-record chart
+  </label>
   <datalist id="opponentOptions"></datalist>
   <div id="efMediaList"></div>
 
@@ -418,6 +474,8 @@
   <div class="hint-line">If this box overlaps more than one wipe line, this slices it into per-wipe pieces (auto-linked so they always highlight together).</div>
 
   <button class="del-hotspot-btn" id="efDelete">Delete this hotspot</button>
+
+  </div>
 </div>
 
 <script>
@@ -821,6 +879,41 @@ let selectedId = null;
 function stageRect(){ return stage.getBoundingClientRect(); }
 function clamp(v, lo, hi){ return Math.min(hi, Math.max(lo, v)); }
 
+/* ============================================================
+   ZOOM — Ctrl + mouse wheel zooms the chart in/out, anchored to
+   wherever the cursor is. Plain scrolling (no Ctrl) is left alone
+   so the page still scrolls normally.
+============================================================ */
+const ZOOM_MIN = 1;
+const ZOOM_MAX = 6;
+const ZOOM_SENSITIVITY = 0.0016;
+let stageZoom = 1;
+const zoomIndicator = document.getElementById('zoomIndicator');
+const zoomIndicatorPct = document.getElementById('zoomIndicatorPct');
+
+function applyZoom(newZoom, originXPct, originYPct){
+  stageZoom = clamp(newZoom, ZOOM_MIN, ZOOM_MAX);
+  if(originXPct !== undefined){
+    stage.style.transformOrigin = `${clamp(originXPct,0,100)}% ${clamp(originYPct,0,100)}%`;
+  }
+  stage.style.transform = stageZoom > 1.001 ? `scale(${stageZoom})` : '';
+  const zoomed = stageZoom > 1.001;
+  zoomIndicator.style.display = zoomed ? 'flex' : 'none';
+  zoomIndicatorPct.textContent = Math.round(stageZoom * 100) + '%';
+}
+
+stage.addEventListener('wheel', (e)=>{
+  if(!e.ctrlKey) return;
+  e.preventDefault();
+  const rect = stageRect();
+  const originXPct = ((e.clientX - rect.left) / rect.width) * 100;
+  const originYPct = ((e.clientY - rect.top) / rect.height) * 100;
+  const factor = Math.exp(-e.deltaY * ZOOM_SENSITIVITY);
+  applyZoom(stageZoom * factor, originXPct, originYPct);
+}, {passive:false});
+
+zoomIndicator.addEventListener('click', ()=> applyZoom(1, 50, 50));
+
 function buildHotspotEl(hs){
   hs.links = hs.links || [];
   const div = document.createElement('div');
@@ -1039,6 +1132,13 @@ stage.addEventListener('pointerdown', (e)=>{
 
 // toolbar controls
 const editHint = document.getElementById('editHint');
+const toolbar = document.getElementById('toolbar');
+const toolbarToggle = document.getElementById('toolbarToggle');
+toolbarToggle.addEventListener('click', ()=>{
+  const open = toolbar.classList.contains('collapsed');
+  toolbar.classList.toggle('collapsed', !open);
+  toolbarToggle.classList.toggle('open', open);
+});
 document.getElementById('editToggle').addEventListener('click', ()=>{
   editMode = !editMode;
   stage.classList.toggle('editing', editMode);
@@ -1149,6 +1249,19 @@ const OUTCOME_INVERSE = {
   "Tie": "Tie"
 };
 
+// Rivalry level between two crews, based on how many counted fights they've
+// had (alt-perspective duplicates excluded). Drives both the hover-line
+// thickness and the size/color of the dot drawn at each crew's position.
+const RIVALRY_TIERS = [
+  {min:1, max:1,        r:0.4,  color:"#8fa3ad", label:"Skirmish"},
+  {min:2, max:3,        r:0.6,  color:"#c08a3e", label:"Recurring clashes"},
+  {min:4, max:6,        r:0.85, color:"#c05f3e", label:"Heated rivalry"},
+  {min:7, max:Infinity, r:1.15, color:"#d43a2f", label:"Fierce rivalry"}
+];
+function rivalryTier(count){
+  return RIVALRY_TIERS.find(t=> count >= t.min && count <= t.max) || RIVALRY_TIERS[0];
+}
+
 function parseMediaUrl(url){
   url = url.trim();
   // YouTube: watch?v=, youtu.be/, shorts/, embed/
@@ -1198,10 +1311,26 @@ function clearHoverLines(){
 
 // Total fight count between two specific crews, counting videos tagged in
 // either direction (A's POV videos vs B, plus B's POV videos vs A).
+// Videos marked as an "alt perspective" of an already-counted fight are
+// excluded so the same battle isn't counted twice.
 function countFightsBetween(hsA, hsB){
-  const a = (hsA.videos||[]).filter(v=> v.opponentId === hsB.id).length;
-  const b = (hsB.videos||[]).filter(v=> v.opponentId === hsA.id).length;
+  const a = (hsA.videos||[]).filter(v=> v.opponentId === hsB.id && !v.altPerspective).length;
+  const b = (hsB.videos||[]).filter(v=> v.opponentId === hsA.id && !v.altPerspective).length;
   return a + b;
+}
+
+// Every crew this hotspot has a fight relationship with — either because
+// this hotspot tagged them as an opponent, or because THEY tagged this
+// hotspot as an opponent on one of their own videos. Reciprocal, so hovering
+// either crew in the pair shows the line.
+function getAllOpponentIds(hs){
+  const ids = new Set();
+  (hs.videos||[]).forEach(v=>{ if(v.opponentId) ids.add(v.opponentId); });
+  HOTSPOTS.forEach(other=>{
+    if(other.id === hs.id) return;
+    (other.videos||[]).forEach(v=>{ if(v.opponentId === hs.id) ids.add(other.id); });
+  });
+  return [...ids];
 }
 
 const HOVER_LINE_MIN_W = 0.09;
@@ -1215,29 +1344,31 @@ function drawHoverLine(fromHs, toHs){
   const x2 = toHs.x + toHs.w/2, y2 = toHs.y + toHs.h/2;
   const fightCount = Math.max(countFightsBetween(fromHs, toHs), 1);
   const width = Math.min(HOVER_LINE_MIN_W + (fightCount - 1) * HOVER_LINE_STEP_W, HOVER_LINE_MAX_W);
+  const tier = rivalryTier(fightCount);
 
   const line = document.createElementNS(SVGNS, 'line');
   line.setAttribute('x1', x1); line.setAttribute('y1', y1);
   line.setAttribute('x2', x2); line.setAttribute('y2', y2);
   line.setAttribute('class', 'hover-line-dyn');
+  line.style.stroke = tier.color;
   line.style.strokeWidth = width;
   svg.appendChild(line);
 
   [[x1,y1],[x2,y2]].forEach(([cx,cy])=>{
     const c = document.createElementNS(SVGNS, 'circle');
     c.setAttribute('cx', cx); c.setAttribute('cy', cy);
-    c.setAttribute('r', Math.max(width * 1.4, 0.35));
+    c.setAttribute('r', tier.r);
     c.setAttribute('class', 'hover-line-dyn');
+    c.style.fill = tier.color;
     svg.appendChild(c);
   });
 }
 
-// Draws a line (thickness = how many times they fought) to every opponent
-// tagged across all of this hotspot's videos.
+// Draws a line (thickness + color/size by rivalry level) to every crew this
+// one has a fight relationship with, in either direction.
 function showOpponentLinesFor(hs){
   clearHoverLines();
-  const opponentIds = [...new Set((hs.videos||[]).map(v=>v.opponentId).filter(Boolean))];
-  opponentIds.forEach(oid=>{
+  getAllOpponentIds(hs).forEach(oid=>{
     const target = hotspotsById[oid];
     if(target) drawHoverLine(hs, target);
   });
@@ -1271,6 +1402,13 @@ const panelVideoTabs = document.getElementById('panelVideoTabs');
 const panelImages = document.getElementById('panelImages');
 const panelImagesHeading = document.getElementById('panelImagesHeading');
 const panelChart = document.getElementById('panelChart');
+const panelToggleDetails = document.getElementById('panelToggleDetails');
+const panelDetails = document.getElementById('panelDetails');
+panelToggleDetails.addEventListener('click', ()=>{
+  const open = !panelDetails.classList.contains('open');
+  panelToggleDetails.classList.toggle('open', open);
+  panelDetails.classList.toggle('open', open);
+});
 let activeVideoTab = 'pov';
 
 function escapeHtml(s){
@@ -1298,16 +1436,16 @@ function getReciprocalVideos(hs){
 }
 
 function scoreOf(hs){
-  const own = (hs.videos||[]).reduce((sum,v)=> sum + (OUTCOME_SCORES[v.outcome] || 0), 0);
-  const recip = getReciprocalVideos(hs).reduce((sum,v)=> sum + (OUTCOME_SCORES[v.outcome] || 0), 0);
+  const own = (hs.videos||[]).filter(v=> !v.altPerspective).reduce((sum,v)=> sum + (OUTCOME_SCORES[v.outcome] || 0), 0);
+  const recip = getReciprocalVideos(hs).filter(v=> !v.altPerspective).reduce((sum,v)=> sum + (OUTCOME_SCORES[v.outcome] || 0), 0);
   return own + recip;
 }
 
 function recordOf(hs){
   const rec = {};
   OUTCOME_ORDER.forEach(o=> rec[o]=0);
-  (hs.videos||[]).forEach(v=>{ if(v.outcome && rec[v.outcome]!==undefined) rec[v.outcome]++; });
-  getReciprocalVideos(hs).forEach(v=>{ if(v.outcome && rec[v.outcome]!==undefined) rec[v.outcome]++; });
+  (hs.videos||[]).forEach(v=>{ if(v.altPerspective) return; if(v.outcome && rec[v.outcome]!==undefined) rec[v.outcome]++; });
+  getReciprocalVideos(hs).forEach(v=>{ if(v.altPerspective) return; if(v.outcome && rec[v.outcome]!==undefined) rec[v.outcome]++; });
   return rec;
 }
 
@@ -1348,6 +1486,11 @@ function openPanel(id){
   } else {
     panelLink.style.display = 'none';
   }
+
+  const hasDetails = !!(hs.desc || hs.members || hs.link);
+  panelToggleDetails.style.display = hasDetails ? 'flex' : 'none';
+  panelToggleDetails.classList.remove('open');
+  panelDetails.classList.remove('open');
 
   activeVideoTab = 'pov';
   renderVideoTabs(hs);
@@ -1411,9 +1554,10 @@ function renderVideoGrid(hs){
       ? `<img src="${v.thumb}" alt="" loading="lazy" decoding="async">`
       : `<div class="thumb-fallback">${(badgeHtml(v.type)||'Video').replace(/<[^>]+>/g,'')}</div>`;
     const sourceLine = v._sourceName ? `<br><span style="opacity:.65;">from ${escapeHtml(v._sourceName)}</span>` : '';
+    const altBadge = v.altPerspective ? `<span class="alt-pov-badge" title="Excluded from the fight-record chart">Alt POV</span>` : '';
     card.innerHTML = `
       <div class="thumb-wrap"><div class="play-icon">▶</div>${thumbInner}</div>
-      <div class="video-title">${badgeHtml(v.type)}${outcomeBadgeHtml(v.outcome)}<br>${escapeHtml(v.title||'Untitled')}${sourceLine}</div>`;
+      <div class="video-title">${badgeHtml(v.type)}${outcomeBadgeHtml(v.outcome)}${altBadge}<br>${escapeHtml(v.title||'Untitled')}${sourceLine}</div>`;
     card.querySelector('.thumb-wrap').addEventListener('click', ()=> window.open(v.url, '_blank'));
     panelVideos.appendChild(card);
   });
@@ -1476,6 +1620,7 @@ function openEditForm(hs){
   renderImageList();
   refreshLinkSelect();
   renderLinkList();
+
   editForm.classList.add('open');
 }
 function closeEditForm(){
@@ -1574,6 +1719,17 @@ function renderMediaList(){
     oppRow.appendChild(oppInput);
     row.appendChild(oppRow);
 
+    const altRow = document.createElement('label');
+    altRow.className = 'alt-pov-check';
+    altRow.style.width = '100%';
+    const altCheck = document.createElement('input');
+    altCheck.type = 'checkbox';
+    altCheck.checked = !!v.altPerspective;
+    altCheck.addEventListener('change', ()=>{ v.altPerspective = altCheck.checked; });
+    altRow.appendChild(altCheck);
+    altRow.appendChild(document.createTextNode("Another crew's POV of a fight already counted (excludes from chart)"));
+    row.appendChild(altRow);
+
     row.addEventListener('mouseenter', ()=>{
       if(v.opponentId && hotspotsById[v.opponentId]) drawHoverLine(currentEditHs, hotspotsById[v.opponentId]);
     });
@@ -1595,16 +1751,18 @@ document.getElementById('efMediaAdd').addEventListener('click', async ()=>{
   const outcome = document.getElementById('efMediaOutcome').value;
   const opponentText = document.getElementById('efMediaOpponent').value.trim();
   const opponentId = opponentText ? resolveOpponentLabel(opponentText) : '';
+  const altPerspective = document.getElementById('efMediaAltPerspective').checked;
   const video = {
     type:parsed.type, embedId:parsed.embedId, url:parsed.url,
     title: parsed.type === 'youtube' ? 'Loading title…' : parsed.url,
-    outcome, thumb:parsed.thumb||'', opponentId
+    outcome, thumb:parsed.thumb||'', opponentId, altPerspective
   };
   currentEditHs.videos = currentEditHs.videos || [];
   currentEditHs.videos.push(video);
   efMediaUrl.value = '';
   document.getElementById('efMediaOutcome').value = '';
   document.getElementById('efMediaOpponent').value = '';
+  document.getElementById('efMediaAltPerspective').checked = false;
   renderMediaList();
 
   if(parsed.type === 'youtube'){
