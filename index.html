@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Worlds Adrift Timeline — US-E/Driss</title>
+<style>
+  :root{
+    --sky-deep:#0e1a26;
+    --sky-mid:#16283a;
+    --parchment:#e8dcc0;
+    --brass:#c08a3e;
+    --rust:#a84b32;
+    --verdigris:#4f8f82;
+    --ink:#0a1319;
+    --fog:#8fa3ad;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #1c3247 0%, transparent 60%),
+      radial-gradient(1000px 700px at 100% 0%, #23374a 0%, transparent 55%),
+      linear-gradient(180deg, var(--sky-deep), var(--ink) 90%);
+    color:var(--parchment);
+    font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+    min-height:100vh;
+  }
+  .display{ font-family: 'Copperplate', 'Trajan Pro', Georgia, serif; letter-spacing:.04em; }
+  header{ padding:44px 5vw 20px; border-bottom:1px solid rgba(192,138,62,.35); }
+  h1{ font-size:clamp(28px,4.2vw,52px); margin:0 0 6px; text-shadow:0 2px 0 rgba(0,0,0,.4); }
+  h1 span{color:var(--brass);}
+  .sub{ color:var(--fog); font-size:14px; letter-spacing:.08em; text-transform:uppercase; font-family:system-ui, sans-serif; }
+  .note{ max-width:780px; margin-top:12px; font-size:13.5px; color:var(--fog); font-family:system-ui, sans-serif; line-height:1.55; }
+  .note b{color:var(--parchment);}
+
+  .toolbar{
+    display:flex; align-items:center; gap:14px; margin-top:18px;
+    font-family:system-ui, sans-serif; font-size:12.5px; color:var(--fog);
+  }
+  .toolbar label{ display:flex; align-items:center; gap:7px; cursor:pointer; user-select:none; }
+  .toolbar input[type=checkbox]{ accent-color:var(--brass); width:15px; height:15px; }
+  .toolbar .hint{ color:var(--fog); opacity:.8; }
+
+  #wrap{ padding:26px 5vw 100px; }
+  #stage{
+    position:relative;
+    max-width:1500px;
+    margin:0 auto;
+    line-height:0;
+    touch-action:none;
+  }
+  #stage img{ width:100%; display:block; border-radius:6px; box-shadow:0 30px 90px rgba(0,0,0,.55);
+    -webkit-user-drag:none; user-drag:none; -webkit-user-select:none; user-select:none; touch-action:none; }
+
+  #linkOverlay{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:8; }
+  #linkOverlay .hover-line-dyn{ opacity:0.9; }
+  #linkOverlay line.hover-line-dyn{ stroke:#d43a2f; }
+  #linkOverlay circle.hover-line-dyn{ fill:#d43a2f; r:0.5; }
+
+  .hotspot{
+    position:absolute;
+    border-radius:6px;
+    cursor:pointer;
+    border:1.5px solid transparent;
+    background:rgba(192,138,62,0);
+    transition: background .15s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+    touch-action:none;
+    -webkit-user-select:none; user-select:none;
+  }
+  .hotspot:hover, .hotspot:focus-visible{
+    background:rgba(192,138,62,.16);
+    border-color:rgba(232,220,192,.9);
+    box-shadow:0 0 0 3px rgba(192,138,62,.25), 0 8px 24px rgba(0,0,0,.35);
+    transform:scale(1.035);
+    z-index:5;
+  }
+  .hotspot .tip{
+    position:absolute;
+    bottom:calc(100% + 8px);
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--ink);
+    color:var(--parchment);
+    border:1px solid var(--brass);
+    padding:5px 10px;
+    border-radius:6px;
+    font-family:system-ui, sans-serif;
+    font-size:12px;
+    white-space:nowrap;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .15s ease, transform .15s ease;
+  }
+  .hotspot:hover .tip{ opacity:1; transform:translateX(-50%) translateY(-2px); }
+
+  .hotspot.linked-glow{
+    border-color:var(--verdigris) !important;
+    background:rgba(79,143,130,.22) !important;
+    outline:2px solid rgba(79,143,130,.75);
+    outline-offset:1px;
+    z-index:4;
+  }
+  .link-badge{ display:none; }
+
+  #stage.calibrate .hotspot{
+    background:rgba(79,143,130,.14);
+    border-color:rgba(79,143,130,.7);
+  }
+  #stage.calibrate .hotspot:hover{
+    background:rgba(192,138,62,.28);
+    border-color:#e8dcc0;
+  }
+
+  /* Edit mode */
+  #stage.editing{ cursor:crosshair; }
+  #stage.editing .hotspot{
+    background:rgba(79,143,130,.16);
+    border:1.5px dashed rgba(79,143,130,.85);
+    cursor:move;
+  }
+  #stage.editing .hotspot:hover{
+    background:rgba(192,138,62,.22);
+    border-color:#e8dcc0;
+  }
+  #stage.editing .hotspot.selected{
+    border-color:#e8dcc0;
+    background:rgba(192,138,62,.22);
+    z-index:6;
+  }
+  .handle{
+    position:absolute;
+    width:11px; height:11px;
+    background:var(--brass);
+    border:1.5px solid var(--ink);
+    border-radius:3px;
+    display:none;
+  }
+  #stage.editing .hotspot.selected .handle{ display:block; }
+  .handle.nw{ left:-6px; top:-6px; cursor:nwse-resize; }
+  .handle.ne{ right:-6px; top:-6px; cursor:nesw-resize; }
+  .handle.sw{ left:-6px; bottom:-6px; cursor:nesw-resize; }
+  .handle.se{ right:-6px; bottom:-6px; cursor:nwse-resize; }
+  .del-btn{
+    position:absolute; top:-11px; right:-11px;
+    width:20px; height:20px; border-radius:50%;
+    background:var(--rust); color:#fff; border:1.5px solid var(--ink);
+    font-size:12px; line-height:1; display:none;
+    align-items:center; justify-content:center; cursor:pointer;
+    font-family:system-ui, sans-serif;
+  }
+  #stage.editing .hotspot.selected .del-btn{ display:flex; }
+  .name-tag{
+    position:absolute; top:-22px; left:-1.5px;
+    background:var(--ink); color:var(--parchment); border:1px solid var(--brass);
+    font-family:system-ui, sans-serif; font-size:10.5px; padding:2px 6px; border-radius:4px;
+    white-space:nowrap; display:none; pointer-events:none;
+  }
+  #stage.editing .hotspot.selected .name-tag{ display:block; }
+  .draw-box{
+    position:absolute; border:2px solid var(--brass); background:rgba(192,138,62,.2);
+    pointer-events:none; border-radius:4px;
+  }
+  .toolbar button{
+    font-family:system-ui, sans-serif; font-size:12.5px; color:var(--parchment);
+    background:rgba(192,138,62,.16); border:1px solid var(--brass);
+    padding:7px 14px; border-radius:7px; cursor:pointer;
+  }
+  .toolbar button:hover{ background:rgba(192,138,62,.32); }
+  .toolbar button.primary{ background:var(--brass); color:var(--ink); font-weight:600; }
+  .toolbar button.primary:hover{ background:#d69a4c; }
+  .toolbar button.danger{ border-color:var(--rust); }
+  .toolbar button.danger:hover{ background:rgba(168,75,50,.3); }
+  #editHint{ font-family:system-ui, sans-serif; font-size:12px; color:var(--verdigris); margin-top:8px; display:none; }
+  #editHint.show{ display:block; }
+
+  .opponent-search{
+    font-family:system-ui, sans-serif; font-size:12.5px; color:var(--parchment);
+    background:rgba(0,0,0,.25); border:1px solid rgba(143,163,173,.3); border-radius:5px;
+    padding:6px 9px;
+  }
+  .opponent-search::placeholder{ color:var(--fog); }
+
+  /* Wipe lines (edit mode only) */
+  .wipe-line{
+    position:absolute; left:0; right:0; height:0; border-top:2px dashed var(--verdigris);
+    display:none; cursor:ns-resize; z-index:9;
+  }
+  #stage.editing .wipe-line{ display:block; }
+  .wipe-line .wl-tag{
+    position:absolute; left:8px; top:-13px; background:var(--verdigris); color:#fff;
+    font-family:system-ui,sans-serif; font-size:11px; padding:2px 8px; border-radius:4px;
+    display:flex; align-items:center; gap:6px; cursor:default;
+  }
+  .wipe-line .wl-tag input{
+    background:transparent; border:none; color:#fff; font-family:system-ui,sans-serif; font-size:11px;
+    width:90px; padding:0;
+  }
+  .wipe-line .wl-tag input:focus{ outline:1px solid #fff; }
+  .wipe-line .wl-del{ cursor:pointer; font-weight:700; padding:0 2px; }
+
+  /* Video POV tabs */
+  .video-tabs{ display:flex; gap:8px; margin-bottom:12px; }
+  .video-tab{
+    font-family:system-ui,sans-serif; font-size:12.5px; color:var(--fog);
+    background:rgba(0,0,0,.2); border:1px solid rgba(143,163,173,.3); border-radius:7px;
+    padding:6px 13px; cursor:pointer;
+  }
+  .video-tab.active{ color:var(--ink); background:var(--brass); border-color:var(--brass); font-weight:600; }
+  .panel-subheading{ font-family:system-ui,sans-serif; font-size:12px; color:var(--fog); margin:18px 0 8px; text-transform:uppercase; letter-spacing:.06em; }
+
+  /* Panel */
+  .overlay{ position:fixed; inset:0; background:rgba(6,10,14,.72); backdrop-filter: blur(3px);
+    display:none; align-items:flex-start; justify-content:center; z-index:50; padding:6vh 4vw; overflow-y:auto; }
+  .overlay.open{display:flex;}
+  .panel{ background:linear-gradient(180deg, var(--sky-mid), var(--sky-deep)); border:1px solid rgba(192,138,62,.4);
+    border-radius:14px; max-width:780px; width:100%; padding:32px 32px 36px; box-shadow:0 30px 80px rgba(0,0,0,.6); position:relative; }
+  .panel .close{ position:absolute; top:18px; right:18px; background:none; border:1px solid var(--fog);
+    color:var(--fog); border-radius:50%; width:32px; height:32px; cursor:pointer; font-size:16px; font-family:system-ui, sans-serif; }
+  .panel .close:hover{color:var(--parchment); border-color:var(--parchment);}
+  .panel-eyebrow{ font-family:system-ui, sans-serif; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--brass); margin-bottom:6px; }
+  .panel h3{ margin:0 0 4px; font-size:26px; }
+  .panel .panel-dates{ font-family:system-ui, sans-serif; font-size:13px; color:var(--fog); margin-bottom:20px; }
+  .video-grid{ display:flex; flex-wrap:wrap; gap:12px; }
+  .video-card{ background:rgba(0,0,0,.25); border:1px solid rgba(143,163,173,.2); border-radius:10px; overflow:hidden; width:168px; }
+  .video-card .thumb-wrap{ position:relative; width:100%; aspect-ratio:16/9; background:#0a0a0a; cursor:pointer; }
+  .video-card .thumb-wrap img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .video-card .thumb-fallback{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-family:system-ui,sans-serif; font-size:11px; color:var(--fog); text-align:center; padding:6px; }
+  .video-card .play-icon{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:22px; color:#fff; text-shadow:0 2px 8px rgba(0,0,0,.8); background:rgba(0,0,0,.12); transition:background .15s ease; }
+  .video-card .thumb-wrap:hover .play-icon{ background:rgba(0,0,0,.32); }
+  .video-title{ font-family:system-ui, sans-serif; font-size:12px; padding:8px 10px; border-top:1px solid rgba(143,163,173,.15); line-height:1.4; }
+  .placeholder-card{ padding:22px; text-align:center; color:var(--fog); font-family:system-ui, sans-serif; font-size:13px; line-height:1.6;
+    border:1px dashed rgba(143,163,173,.35); border-radius:10px; }
+  .placeholder-card code{ color:var(--verdigris); background:rgba(79,143,130,.12); padding:2px 6px; border-radius:4px; }
+  .panel-desc{ font-family:system-ui, sans-serif; font-size:14px; color:var(--parchment); line-height:1.6; margin-bottom:20px; }
+  .chart-title{
+    font-family:'Copperplate','Trajan Pro',Georgia,serif; font-size:15px; color:var(--parchment);
+    margin:22px 0 10px; padding-top:18px; border-top:1px solid rgba(143,163,173,.18);
+  }
+  .outcome-chart{ display:flex; align-items:flex-end; gap:8px; height:100px; }
+  .oc-col{ display:flex; flex-direction:column; align-items:center; flex:1; height:100%; justify-content:flex-end; }
+  .oc-bar-wrap{ width:100%; display:flex; align-items:flex-end; justify-content:center; flex:1; position:relative; }
+  .oc-bar{ width:70%; border-radius:3px 3px 0 0; min-height:3px; transition:height .2s ease; }
+  .oc-count{ font-family:system-ui,sans-serif; font-size:11px; color:var(--parchment); margin-bottom:3px; }
+  .oc-label{ font-family:system-ui,sans-serif; font-size:9px; color:var(--fog); margin-top:6px; text-align:center; line-height:1.25; }
+  .no-fights-note{ font-family:system-ui,sans-serif; font-size:12.5px; color:var(--fog); font-style:italic; }
+  .img-card{ background:rgba(0,0,0,.25); border:1px solid rgba(143,163,173,.2); border-radius:10px; overflow:hidden; width:168px; }
+  .img-card img{ display:block; width:100%; }
+  .platform-badge{ display:inline-block; font-size:10px; font-family:system-ui,sans-serif; text-transform:uppercase;
+    letter-spacing:.06em; padding:2px 7px; border-radius:4px; margin-right:8px; vertical-align:1px; }
+  .platform-badge.youtube{ background:#c4302b; color:#fff; }
+  .platform-badge.twitch{ background:#6441a5; color:#fff; }
+
+  /* Edit form sidebar */
+  .editform{
+    position:fixed; top:0; right:0; bottom:0; width:360px; max-width:92vw;
+    background:linear-gradient(180deg, var(--sky-mid), var(--sky-deep));
+    border-left:1px solid rgba(192,138,62,.4);
+    box-shadow:-20px 0 60px rgba(0,0,0,.5);
+    z-index:60; padding:26px 22px; overflow-y:auto;
+    transform:translateX(100%); transition:transform .2s ease;
+    font-family:system-ui, sans-serif;
+  }
+  .editform.open{ transform:translateX(0); }
+  .editform h4{ margin:0 0 16px; font-family:'Copperplate','Trajan Pro',Georgia,serif; font-size:19px; color:var(--parchment); }
+  .editform label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--brass); margin:16px 0 6px; }
+  .editform input[type=text], .editform textarea, .editform select{
+    width:100%; background:rgba(0,0,0,.25); border:1px solid rgba(143,163,173,.3); border-radius:7px;
+    color:var(--parchment); padding:9px 11px; font-family:system-ui,sans-serif; font-size:13.5px; resize:vertical;
+  }
+  .editform textarea{ min-height:70px; }
+  .editform .row2{ display:flex; gap:10px; }
+  .editform .row2 > *{ flex:1; }
+  .media-item{
+    display:flex; align-items:center; gap:8px; background:rgba(0,0,0,.2); border:1px solid rgba(143,163,173,.2);
+    border-radius:7px; padding:7px 9px; margin-top:8px; font-size:12.5px;
+  }
+  .media-item .mi-title{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .media-item button{ background:none; border:none; color:var(--rust); cursor:pointer; font-size:14px; padding:2px 4px; }
+  .media-item img{ width:34px; height:34px; object-fit:cover; border-radius:4px; flex-shrink:0; }
+  .add-media-row{ display:flex; gap:6px; margin-top:6px; }
+  .hint-line{ font-family:system-ui,sans-serif; font-size:11px; color:var(--fog); margin-top:5px; line-height:1.4; }
+  .hint-line a{ color:var(--verdigris); }
+  .add-media-row input, .add-media-row select{ flex:1; min-width:0; }
+  .add-media-row button, .editform .fileBtn{
+    background:var(--brass); color:var(--ink); border:none; border-radius:6px; padding:8px 12px;
+    font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap;
+  }
+  .editform .fileBtn{ display:inline-block; margin-top:8px; }
+  .editform .closeform{
+    position:absolute; top:20px; right:18px; background:none; border:1px solid var(--fog); color:var(--fog);
+    border-radius:50%; width:28px; height:28px; cursor:pointer;
+  }
+  .editform .del-hotspot-btn{
+    margin-top:26px; width:100%; background:rgba(168,75,50,.18); border:1px solid var(--rust); color:var(--parchment);
+    padding:9px; border-radius:7px; cursor:pointer; font-size:13px;
+  }
+  .editform .del-hotspot-btn:hover{ background:rgba(168,75,50,.32); }
+  ::-webkit-scrollbar{width:10px;}
+  ::-webkit-scrollbar-thumb{background:rgba(192,138,62,.4); border-radius:6px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="sub">US-E / Driss server history</div>
+  <h1 class="display">Worlds Adrift <span>Timeline</span></h1>
+  <p class="note">
+    This is your original chart, pixel for pixel — no redraw. Hover any named crew or event to see it pop out;
+    click it to open its videos, screenshots, and write-up. In <b>Edit mode</b>, click any box to rename it,
+    write a description, paste YouTube/Twitch links, upload screenshots, or <b>link it to another hotspot</b>
+    (e.g. a crew and the crew it split from) — hovering either one glows both.
+  </p>
+  <div class="toolbar">
+    <button id="editToggle" class="primary">✎ Edit positions</button>
+    <button id="addWipeLineBtn">＋ Add wipe line</button>
+    <button id="applyWipeLinesBtn">✂ Apply wipe lines to all crews</button>
+    <button id="downloadBtn">⬇ Download positions (JSON)</button>
+    <button id="importBtn">⬆ Import positions (JSON)</button>
+    <input type="file" id="importFile" accept="application/json" style="display:none;">
+    <button id="resetBtn" class="danger">↺ Reset all</button>
+    <span class="hint">·  <span id="hotspotCount"></span> clickable regions</span>
+  </div>
+  <div id="editHint">
+    Edit mode is on. <b>Drag</b> a box to move it, drag its corner squares to resize, click the <b>×</b> to delete it.
+    <b>Click-drag on empty chart area</b> to draw a brand new box. Use <b>"＋ Add wipe line"</b> to mark wipe
+    boundaries, dragging each line to sit exactly at a wipe divider and naming it after the wipe <b>above</b> it
+    (a line labeled "Wipe 8" means everything just above that line, down to the next line, is Wipe 8). Once your
+    lines are placed, hit <b>"✂ Apply wipe lines to all crews"</b> — every box on the chart gets cut at those
+    lines in one pass and relabeled automatically; anything cut into pieces stays linked so it always highlights
+    together. When you're done, hit "Download positions" and send me the file — I'll drop it straight into the page.
+  </div>
+</header>
+
+<div id="wrap">
+  <div id="stage">
+    <img id="chartImg" src="WATimeline.png" alt="Worlds Adrift Timeline chart" draggable="false" ondragstart="return false;" />
+    <svg id="linkOverlay" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="panel">
+    <button class="close" id="closeBtn" aria-label="Close">✕</button>
+    <div class="panel-eyebrow" id="panelEra"></div>
+    <h3 id="panelName"></h3>
+    <div class="panel-dates" id="panelDates"></div>
+    <div class="panel-desc" id="panelDesc"></div>
+    <div class="panel-desc" id="panelMembers"></div>
+    <div class="panel-desc" id="panelLink"></div>
+    <div id="panelVideoTabs" class="video-tabs"></div>
+    <div class="video-grid" id="panelVideos"></div>
+    <div id="panelImagesHeading" class="panel-subheading" style="display:none;">Screenshots</div>
+    <div class="video-grid" id="panelImages"></div>
+    <div id="panelChart"></div>
+  </div>
+</div>
+
+<div class="editform" id="editForm">
+  <button class="closeform" id="editFormClose">✕</button>
+  <h4>Edit hotspot</h4>
+
+  <label for="efName">Name</label>
+  <input type="text" id="efName">
+
+  <label for="efEra">Era / group</label>
+  <input type="text" id="efEra">
+
+  <label for="efDesc">Description</label>
+  <textarea id="efDesc" placeholder="What happened here, who was involved, notable moments…"></textarea>
+
+  <label for="efMembers">Members</label>
+  <textarea id="efMembers" placeholder="List crew members, one per line or comma-separated…"></textarea>
+
+  <label for="efLink">External link (patch notes, wiki, forum post…)</label>
+  <input type="text" id="efLink" placeholder="https://…">
+
+  <label>YouTube or Twitch link</label>
+  <div class="add-media-row">
+    <input type="text" id="efMediaUrl" placeholder="Paste a YouTube or Twitch URL">
+  </div>
+  <div class="add-media-row">
+    <select id="efMediaOutcome">
+      <option value="">No outcome / not a fight</option>
+      <option value="Got Sunk">Got Sunk (worst defeat)</option>
+      <option value="Clear Defeat">Clear Defeat</option>
+      <option value="Partial Defeat">Partial Defeat</option>
+      <option value="Tie">Tie</option>
+      <option value="Partial Victory">Partial Victory</option>
+      <option value="Clear Victory">Clear Victory</option>
+      <option value="Sunk">Sunk (enemy sunk — best outcome)</option>
+    </select>
+  </div>
+  <div class="add-media-row">
+    <input type="text" id="efMediaOpponent" class="opponent-search" list="opponentOptions" placeholder="🔍 Fought against… (optional)" autocomplete="off">
+    <button id="efMediaAdd">Add</button>
+  </div>
+  <div class="hint-line">Only shows crews from this box's own wipe — set the "Era" field above first if the list looks empty.</div>
+  <datalist id="opponentOptions"></datalist>
+  <div id="efMediaList"></div>
+
+  <label>Screenshots</label>
+  <div class="add-media-row">
+    <input type="text" id="efImageUrl" placeholder="Paste an image URL (e.g. from postimages.org)">
+    <button id="efImageAdd">Add</button>
+  </div>
+  <div class="hint-line">No hosting? <a href="https://postimages.org" target="_blank" rel="noopener">Upload free at postimages.org ↗</a> then paste the direct image link here.</div>
+  <div id="efImageList"></div>
+
+  <label>Link to another hotspot</label>
+  <div class="add-media-row">
+    <select id="efLinkSelect"></select>
+    <button id="efLinkAdd">Link</button>
+  </div>
+  <div id="efLinkList"></div>
+
+  <label>Wipe boundaries</label>
+  <button class="fileBtn" id="efSplitBtn" style="width:100%;">✂ Split at wipe lines</button>
+  <div class="hint-line">If this box overlaps more than one wipe line, this slices it into per-wipe pieces (auto-linked so they always highlight together).</div>
+
+  <button class="del-hotspot-btn" id="efDelete">Delete this hotspot</button>
+</div>
+
+<script>
+/* ============================================================
+   HOTSPOTS — x, y, w, h are all PERCENTAGES of the image, so
+   they stay aligned at any display size. Coordinates are my
+   best-effort read of where each label/line sits in the source
+   PNG (row bands were measured precisely; exact x-position of
+   each label within a row is estimated). Nudge any of these and
+   I'll adjust — just tell me the id and the direction.
+============================================================ */
+const HOTSPOTS = [
+  {id:"vexus_w9", name:"Vexus", era:"Wipe 9", desc:"", members:"", link:"", x:25.63, y:11.45, w:13.87, h:2.02, videos:[], images:[], links:["vexus_w3"]},
+  {id:"p4g", name:"Poo Poo Pee Gang (P4G)", era:"Wipe 9", desc:"", members:"", link:"", x:39.1, y:8.78, w:1.5, h:3.54, videos:[], images:[], links:["new_25gq31"]},
+  {id:"bl_inc_w9", name:"BL Inc", era:"Wipe 9", desc:"", members:"", link:"", x:42.57, y:9.64, w:1.5, h:14.26, videos:[], images:[], links:[]},
+  {id:"catalina", name:"Catalina Wine Mixer", era:"Wipe 9", desc:"", members:"", link:"", x:46.3, y:9.22, w:1.5, h:2.81, videos:[], images:[], links:[]},
+  {id:"borg_w9", name:"Borg", era:"Wipe 9", desc:"", members:"", link:"", x:50.33, y:35.25, w:2.2, h:4, videos:[], images:[], links:["borg_w6"]},
+  {id:"legacy", name:"LEGACY", era:"Wipe 9", desc:"", members:"", link:"", x:57.77, y:8.51, w:1.5, h:4.75, videos:[], images:[], links:[]},
+  {id:"palvi", name:"Pahri", era:"Wipe 9", desc:"", members:"", link:"", x:58.75, y:14.35, w:2, h:2.6, videos:[], images:[], links:[]},
+  {id:"owlestflight", name:"OnelastFlight", era:"Wipe 9", desc:"", members:"", link:"", x:63.37, y:9.29, w:1.5, h:3.41, videos:[], images:[], links:[]},
+  {id:"join_or_die", name:"Join or Die", era:"Wipe 8", desc:"", members:"", link:"", x:27.16, y:15.46, w:1.5, h:18.2, videos:[], images:[], links:[]},
+  {id:"something_badass", name:"Something Badass", era:"Wipe 8", desc:"", members:"", link:"", x:47.97, y:9.28, w:1.5, h:8.66, videos:[], images:[], links:[]},
+  {id:"unknown_w8", name:"Unknown", era:"Wipe 8", desc:"", members:"", link:"", x:44.2, y:18.77, w:8, h:1.5, videos:[], images:[], links:[]},
+  {id:"fake_taxi", name:"Fake Taxi", era:"Wipe 8", desc:"", members:"", link:"", x:57.83, y:13.37, w:1.5, h:4.7, videos:[], images:[], links:[]},
+  {id:"green_pearl", name:"Green Pearl", era:"Wipe 8", desc:"", members:"", link:"", x:60.36, y:9.7, w:1.5, h:21.84, videos:[], images:[], links:[]},
+  {id:"unity", name:"Unity", era:"Wipe 8", desc:"", members:"", link:"", x:59.07, y:24.19, w:1.5, h:4.4, videos:[], images:[], links:[]},
+  {id:"mothership", name:"Mothership", era:"Wipe 8", desc:"", members:"", link:"", x:64.54, y:12.52, w:1.5, h:2.59, videos:[], images:[], links:["new_hbrvps"]},
+  {id:"deja_vu", name:"Déjà Vu", era:"Wipe 8", desc:"", members:"", link:"", x:66.56, y:10.11, w:1.5, h:13.87, videos:[], images:[], links:[]},
+  {id:"aluminati", name:"Aluminati", era:"Wipe 8", desc:"", members:"", link:"", x:61.7, y:31.49, w:1.5, h:6.5, videos:[], images:[], links:[]},
+  {id:"zafiuos_crew", name:"Zatios's Crew", era:"Wipe 8", desc:"", members:"", link:"", x:55.63, y:31.3, w:1.5, h:5.73, videos:[], images:[], links:[]},
+  {id:"synovus_w8", name:"Synovus", era:"Wipe 8", desc:"", members:"", link:"", x:72.9, y:9.65, w:1.5, h:50.49, videos:[], images:[], links:[]},
+  {id:"freeport_vela", name:"Freeport Vela", era:"Wipe 7", desc:"", members:"", link:"", x:28.53, y:28.91, w:9.8, h:4.11, videos:[], images:[], links:[]},
+  {id:"the_bork", name:"The Bork", era:"Wipe 7", desc:"", members:"", link:"", x:39.7, y:32.77, w:2, h:4.06, videos:[], images:[], links:["new_25gq31"]},
+  {id:"bork_vela_security", name:"The Bork / Vela Security", era:"Wipe 7", desc:"", members:"", link:"", x:38.97, y:28.77, w:1.8, h:3.6, videos:[], images:[], links:["new_25gq31"]},
+  {id:"casually_addicted", name:"Casually Addicted", era:"Wipe 7", desc:"", members:"", link:"", x:34.57, y:13.52, w:1.5, h:14.14, videos:[], images:[], links:[]},
+  {id:"kevda_muttonchops", name:"Kevdo & Muttonchops Join CA", era:"Wipe 7", desc:"", members:"", link:"", x:35.76, y:27.2, w:4, h:1.5, videos:[], images:[], links:[]},
+  {id:"crimson_federation", name:"Crimson Federation", era:"Wipe 7", desc:"", members:"", link:"", x:48.76, y:23.39, w:1.5, h:11.27, videos:[], images:[], links:[]},
+  {id:"krob", name:"Krob", era:"Wipe 7", desc:"", members:"", link:"", x:44.16, y:28.92, w:1.5, h:2.77, videos:[], images:[], links:[]},
+  {id:"salvation", name:"Salvation", era:"Wipe 7", desc:"", members:"", link:"", x:56.6, y:23.5, w:1.5, h:5.43, videos:[], images:[], links:[]},
+  {id:"natives_w7", name:"Natives", era:"Wipe 7", desc:"", members:"", link:"", x:52.27, y:14.05, w:1.5, h:28.8, videos:[], images:[], links:[]},
+  {id:"beaver_dam", name:"The Beaver Dam", era:"Wipe 7", desc:"", members:"", link:"", x:70.53, y:9.95, w:1.5, h:34.81, videos:[], images:[], links:[]},
+  {id:"trappaholic", name:"Trippaholic", era:"Wipe 7", desc:"", members:"", link:"", x:41.77, y:34.92, w:4.83, h:1.5, videos:[], images:[], links:[]},
+  {id:"borg_fighters", name:"Borg Fighters / VexusFanclub", era:"Wipe 6", desc:"", members:"", link:"", x:39.2, y:36.77, w:1.5, h:2.87, videos:[], images:[], links:[]},
+  {id:"bastions_crew", name:"Bastion's Weird Crew", era:"Wipe 6", desc:"", members:"", link:"", x:40.17, y:39.55, w:2.07, h:1.5, videos:[], images:[], links:[]},
+  {id:"aliiloas_crew", name:"Aliiloa's Crew", era:"Wipe 6", desc:"", members:"", link:"", x:54.23, y:10.01, w:1.5, h:18.52, videos:[], images:[], links:[]},
+  {id:"borg_w6", name:"Borg", era:"Wipe 6", desc:"", members:"", link:"", x:50.54, y:9.53, w:1.5, h:7.04, videos:[], images:[], links:["borg_w9"]},
+  {id:"omegavex", name:"OmegaVex (Internal Engines)", era:"Wipe 5", desc:"", members:"", link:"", x:21.9, y:40.78, w:3.07, h:4.35, videos:[], images:[], links:[]},
+  {id:"zephinwo", name:"Zephinwo / Gipsy Danger / Xrelik", era:"Wipe 5", desc:"", members:"", link:"", x:38.83, y:39.63, w:1.53, h:4.35, videos:[], images:[], links:[]},
+  {id:"surprise_baguette", name:"Surprise Baguette", era:"Wipe 5", desc:"", members:"", link:"", x:66.33, y:24.63, w:1.5, h:17.97, videos:[], images:[], links:[]},
+  {id:"free_skies", name:"Free Skies Coalition", era:"Wipe 3", desc:"", members:"", link:"", x:54.4, y:55.56, w:1.5, h:4.12, videos:[], images:[], links:[]},
+  {id:"freeport_osiris", name:"Freeport Osiris", era:"Wipe 3", desc:"July 9, 2017 – August 25, 2017", members:"", link:"", x:57.2, y:56.51, w:9.2, h:3.34, videos:[], images:[], links:[]},
+  {id:"shark_fleet", name:"Shark Fleet", era:"Wipe 3", desc:"", members:"", link:"", x:52.73, y:59.61, w:1.5, h:2.4, videos:[], images:[], links:[]},
+  {id:"anti_freeport", name:"Anti-Freeport", era:"Wipe 3", desc:"", members:"", link:"", x:32.46, y:55.3, w:11.54, h:4.88, videos:[], images:[], links:[]},
+  {id:"ceremor", name:"Ceremor", era:"Wipe 3", desc:"", members:"", link:"", x:30.76, y:53.17, w:1.5, h:8.4, videos:[], images:[], links:[]},
+  {id:"eranoks_crew", name:"Eranok's Crew", era:"Wipe 3", desc:"", members:"", link:"", x:66.7, y:51.15, w:1.5, h:8.42, videos:[], images:[], links:[]},
+  {id:"deletion_bug", name:"Deletion Bug / Podracer Meta", era:"Wipe 3", desc:"Aug 30, 2017 – September 2017", members:"", link:"", x:16.93, y:53.26, w:8.07, h:2.4, videos:[], images:[], links:[]},
+  {id:"gitlit_biglet", name:"GitLit & Biglet", era:"Wipe 3", desc:"", members:"", link:"", x:27.53, y:38.47, w:1.5, h:34.07, videos:[], images:[], links:[]},
+  {id:"vexus_w3", name:"Vexus", era:"Wipe 3", desc:"", members:"", link:"", x:25.47, y:39.47, w:1.5, h:35.06, videos:[], images:[], links:["vexus_w9"]},
+  {id:"old_man_billy", name:"OldManBilly", era:"Wipe 2", desc:"", members:"", link:"", x:56.23, y:61.77, w:1.53, h:5.91, videos:[], images:[], links:[]},
+  {id:"freeport_bank_griefed", name:"08-09: Freeport Bank is griefed", era:"Event", desc:"", members:"", link:"", x:73.6, y:68.87, w:8, h:1.4, videos:[], images:[], links:[]},
+  {id:"meta_large_legendary", name:"Large Legendary Engine-Fitting Ships", era:"Meta Ship Design", desc:"6/14/2019 – End", members:"", link:"", x:21.7, y:9.22, w:3.46, h:3.22, videos:[], images:[], links:[]},
+  {id:"meta_tight_vengine_narrow", name:"Tight V-Engine Exteriors, Narrow Cannon Decks", era:"Meta Ship Design", desc:"4/10/2018 – 9/06/2018", members:"", link:"", x:21.63, y:12.77, w:3.54, h:11.87, videos:[], images:[], links:[]},
+  {id:"meta_tight_vengine_wide", name:"Tight V-Engine Exteriors, Wide Cannon Decks", era:"Meta Ship Design", desc:"9/06/2018 – 12/08/2018", members:"", link:"", x:21.57, y:24.8, w:3.66, h:5.88, videos:[], images:[], links:[]},
+  {id:"meta_small_box", name:"Small Box Meta", era:"Meta Ship Design", desc:"July – Aug 2017", members:"", link:"", x:19.2, y:55.79, w:5.93, h:3.54, videos:[], images:[], links:[]},
+  {id:"new_uc2qvz", name:"DangerSeeker/DocFreeman", era:"", desc:"", members:"", link:"", x:38.4, y:33.09, w:1.2, h:4.27, videos:[], images:[], links:[]},
+  {id:"new_u2z9x5", name:"Soft Wipe", era:"", desc:"", members:"", link:"", x:74.6, y:22.27, w:6.66, h:2.87, videos:[], images:[], links:[]},
+  {id:"patch_update_31", name:"Update 31", era:"Patch", desc:"2019-06-11 — Territory Control Added, Legendary Engines", members:"", link:"https://worldsadrift.fandom.com/wiki/Update_31", x:81.62, y:9.33, w:18.21, h:3.05, videos:[], images:[], links:[]},
+  {id:"patch_update_30", name:"Update 30", era:"Patch", desc:"2019-05-01 — Ship Storage Refactor", members:"", link:"https://worldsadrift.fandom.com/wiki/Update_30", x:81.74, y:12.58, w:17.97, h:2.59, videos:[], images:[], links:[]},
+  {id:"patch_update_29_5", name:"Update 29.5", era:"Patch", desc:"2019-02-06 — Steam Shop Added", members:"", link:"https://worldsadrift.fandom.com/wiki/Update_29.5", x:81.68, y:15.38, w:18.27, h:5.09, videos:[], images:[], links:[]},
+  {id:"patch_update_29_4", name:"Update 29.4", era:"Patch", desc:"2019-01-14 — Reduced Rubberbanding", members:"", link:"https://worldsadrift.fandom.com/wiki/Update_29.4", x:81.86, y:20.63, w:18.03, h:3.18, videos:[], images:[], links:[]},
+  {id:"patch_update_29", name:"Update 29", era:"Patch", desc:"2018-12-11 — Ship Painting System, overheat, new metals", members:"", link:"https://worldsadrift.fandom.com/wiki/Update_29", x:82.29, y:24.71, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_update_28_1", name:"Update 28.1", era:"Patch", desc:"2018-11-06 — Latency Duping Fix", members:"", link:"https://worldsadrift.fandom.com/wiki/Update_28.1", x:82.23, y:26.67, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_update_26", name:"Update 26", era:"Patch", desc:"2018-09-06 — Ship Netcode Rework", members:"", link:"https://worldsadrift.fandom.com/wiki/Update_26", x:81.68, y:29.06, w:18.32, h:1.5, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_2_2_7", name:"Beta 0.2.2.7", era:"Patch", desc:"2018-08-21 — Server Lag Optimization", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.2.2.7", x:81.8, y:30.66, w:18.2, h:1.5, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_2_2_5", name:"Beta 0.2.2.5", era:"Patch", desc:"2018-07-24 — Sail Boom Collision", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.2.2.5", x:81.08, y:32.15, w:18.76, h:1.87, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_2_2_3", name:"Beta 0.2.2.3", era:"Patch", desc:"2018-06-27 — Atlas Shard Fix", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.2.2.3", x:85, y:34.1, w:15, h:1.5, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_2_2_1", name:"Beta 0.2.2.1", era:"Patch", desc:"2018-06-26 — Cosmetic Ship Parts", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.2.2.1", x:85, y:35.69, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_2_1_1", name:"Beta 0.2.1.1", era:"Patch", desc:"2018-06-12 — Emote Wheel Added", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.2.1.1", x:85, y:36.39, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_2_0_5", name:"Beta 0.2.0.5", era:"Patch", desc:"2018-05-30 — Saborian Military Uniforms", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.2.0.5", x:85, y:36.96, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_2_0_3", name:"Beta 0.2.0.3", era:"Patch", desc:"2018-05-17 — Explosion VFX Rework", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.2.0.3", x:85, y:37.63, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_2_0_1", name:"Beta 0.2.0.1", era:"Patch", desc:"2018-05-16 — Early Access Launch", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.2.0.1", x:85, y:38.22, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_12_3", name:"Beta 0.1.12.3", era:"Patch", desc:"2018-05-03 — Interaction Bug Fix", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.12.3", x:85, y:38.74, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_12_1", name:"Beta 0.1.12.1", era:"Patch", desc:"2018-05-01 — New Player Tutorials", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.12.1", x:85, y:39.33, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_11_1", name:"Beta 0.1.11.1", era:"Patch", desc:"2018-04-17 — Reviver Mechanic Fixes", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.11.1", x:85, y:39.97, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_10_1", name:"Beta 0.1.10.1", era:"Patch", desc:"2018-04-03 — Climbing Overhaul", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.10.1", x:85, y:40.69, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_9_1", name:"Beta 0.1.9.1", era:"Patch", desc:"2018-03-22 — Brand New World", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.9.1", x:85, y:41.48, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_8_1", name:"Beta 0.1.8.1", era:"Patch", desc:"2018-03-06 — Fixed Profile Corruption", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.8.1", x:85, y:42.31, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_7_3", name:"Beta 0.1.7.3", era:"Patch", desc:"2018-02-23 — Invisible Chest Fix", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.7.3", x:85, y:42.87, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_7_1", name:"Beta 0.1.7.1", era:"Patch", desc:"2018-02-20 — Added The Blight", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.7.1", x:85, y:43.36, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_6_1", name:"Beta 0.1.6.1", era:"Patch", desc:"2018-02-06 — Swivel Guns Added", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.6.1", x:85, y:43.98, w:15, h:1.5, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_5_3", name:"Beta 0.1.5.3", era:"Patch", desc:"2017-12-20 — Winter Hat Cosmetic", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.5.3", x:85, y:45.57, w:15, h:2.81, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_5_1", name:"Beta 0.1.5.1", era:"Patch", desc:"2017-12-11 — Unity 5.6 Upgrade", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.5.1", x:85, y:48.44, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_4_15", name:"Beta 0.1.4.15", era:"Patch", desc:"2017-10-30 — Halloween Cosmetic Set", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.4.15", x:85, y:49.07, w:15, h:2.59, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_4_13", name:"Beta 0.1.4.13", era:"Patch", desc:"2017-10-09 — Inventory Duping Hotfix", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.4.13", x:85, y:51.61, w:15, h:1.5, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_4_11", name:"Beta 0.1.4.11", era:"Patch", desc:"2017-10-03 — Major Duping Fix", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.4.11", x:85, y:53.21, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_4_9", name:"Beta 0.1.4.9", era:"Patch", desc:"2017-09-14 — Added Anti-Cheat (EAC)", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.4.9", x:85, y:54.07, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_4_7", name:"Beta 0.1.4.7", era:"Patch", desc:"2017-09-07 — Mirrored Ship Parts", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.4.7", x:85, y:54.9, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_4_5", name:"Beta 0.1.4.5", era:"Patch", desc:"2017-08-29 — Metal Scrap Fix", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.4.5", x:85, y:55.49, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_4_3", name:"Beta 0.1.4.3", era:"Patch", desc:"2017-08-18 — Account Verification Fix", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.4.3", x:85, y:56.13, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_4_1", name:"Beta 0.1.4.1", era:"Patch", desc:"2017-08-16 — Added Atlas Pulse", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.4.1", x:85, y:56.78, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_3_7", name:"Beta 0.1.3.7", era:"Patch", desc:"2017-07-25 — Reduced Memory Usage", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.3.7", x:85, y:57.52, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_3_5", name:"Beta 0.1.3.5", era:"Patch", desc:"2017-07-20 — Client Freeze Testing", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.3.5", x:85, y:58.05, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_3_3", name:"Beta 0.1.3.3", era:"Patch", desc:"2017-06-30 — Ship Damage Hotfix", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.3.3", x:85, y:59, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_3_0", name:"Beta 0.1.3.0", era:"Patch", desc:"2017-06-29 — Raised Schematic Limit", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.3.0", x:85, y:59.88, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_2_1", name:"Beta 0.1.2.1", era:"Patch", desc:"2017-06-22 — New Server Regions", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.2.1", x:85, y:60.37, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_1_1", name:"Beta 0.1.1.1", era:"Patch", desc:"2017-06-20 — Island Loading Optimization", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.1.1", x:85, y:61, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_beta_0_1_0_0", name:"Beta 0.1.0.0", era:"Patch", desc:"2017-05-24 — Closed Beta Launch", members:"", link:"https://worldsadrift.fandom.com/wiki/Beta_0.1.0.0", x:85, y:61.94, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_alpha_0_0_6", name:"Alpha 0.0.6", era:"Patch", desc:"2017-04-06 — Added Biomes", members:"", link:"https://worldsadrift.fandom.com/wiki/Alpha_0.0.6", x:85, y:62.93, w:15, h:2.5, videos:[], images:[], links:[]},
+  {id:"patch_alpha_5_3", name:"Alpha 5.3", era:"Patch", desc:"2017-01-26 — Gauntlet Salvage Change", members:"", link:"https://worldsadrift.fandom.com/wiki/Alpha_5.3", x:85, y:65.69, w:14.58, h:4.6, videos:[], images:[], links:[]},
+  {id:"patch_alpha_5_1", name:"Alpha 5.1", era:"Patch", desc:"2016-12-21 — Creature Population Fix", members:"", link:"https://worldsadrift.fandom.com/wiki/Alpha_5.1", x:85, y:71.09, w:15, h:1.5, videos:[], images:[], links:[]},
+  {id:"patch_alpha_5_0", name:"Alpha 5.0", era:"Patch", desc:"2016-12-12 — Custom Ship Frames", members:"", link:"https://worldsadrift.fandom.com/wiki/Alpha_5.0", x:85, y:72.84, w:15, h:0.55, videos:[], images:[], links:[]},
+  {id:"patch_alpha_4", name:"Alpha 4", era:"Patch", desc:"2016-08-18 — Procedural Ship Parts", members:"", link:"https://worldsadrift.fandom.com/wiki/Alpha_4", x:85, y:73.47, w:15, h:7.51, videos:[], images:[], links:[]},
+  {id:"patch_alpha_3_5", name:"Alpha 3.5", era:"Patch", desc:"2016-04-07 — Fixed Lag Monster", members:"", link:"https://worldsadrift.fandom.com/wiki/Alpha_3.5", x:85, y:81.17, w:15, h:8.22, videos:[], images:[], links:[]},
+  {id:"patch_alpha_3", name:"Alpha 3", era:"Patch", desc:"2016-02-25 — Shipyard Ownership System", members:"", link:"https://worldsadrift.fandom.com/wiki/Alpha_3", x:85, y:89.61, w:15, h:2.62, videos:[], images:[], links:[]},
+  {id:"patch_alpha_2", name:"Alpha 2", era:"Patch", desc:"2015-12-15 — Basic Creatures Added", members:"", link:"https://worldsadrift.fandom.com/wiki/Alpha_2", x:85, y:92.55, w:15, h:4.29, videos:[], images:[], links:[]},
+  {id:"patch_alpha_1", name:"Alpha 1", era:"Patch", desc:"2015-11-19 — First Public Build", members:"", link:"https://worldsadrift.fandom.com/wiki/Alpha_1", x:85, y:97.03, w:15, h:2.97, videos:[], images:[], links:[]},
+  {id:"new_phpkpp", name:"Unknown", era:"", desc:"", members:"", link:"", x:44.2, y:15.92, w:3.47, h:0.68, videos:[], images:[], links:[]},
+  {id:"new_hbrvps", name:"Mothership", era:"Wipe 4", desc:"", members:"", link:"", x:64.27, y:33.71, w:1.73, h:11.9, videos:[], images:[], links:["mothership", "new_klw2hz"]},
+  {id:"new_renpc4", name:"Sterdekie", era:"", desc:"", members:"", link:"", x:68, y:32.39, w:1.53, h:3.16, videos:[], images:[], links:[]},
+  {id:"new_d1lsi0", name:"The Long Hunt", era:"", desc:"", members:"", link:"", x:68.53, y:38.17, w:2, h:7.31, videos:[], images:[], links:[]},
+  {id:"new_klw2hz", name:"Mothership", era:"Wipe 3", desc:"", members:"", link:"", x:64.67, y:51.09, w:1.4, h:2.89, videos:[], images:[], links:["new_hbrvps"]},
+  {id:"new_2vmr3t", name:"Freeport Bank Grief", era:"", desc:"", members:"", link:"", x:74.6, y:55.89, w:6.6, h:1.63, videos:[], images:[], links:[]},
+  {id:"new_du92qg", name:"Golden Sparrows", era:"Wipe 3", desc:"", members:"", link:"", x:54.37, y:59.78, w:1.76, h:1.9, videos:[], images:[], links:[]},
+  {id:"new_25gq31", name:"The Bork", era:"Wipe 8", desc:"", members:"", link:"", x:38.92, y:24.03, w:2.17, h:4.42, videos:[], images:[], links:["p4g", "the_bork", "bork_vela_security"]},
+  {id:"new_hwjhwl", name:"The Beaver Dam", era:"Wipe 3", desc:"", members:"", link:"", x:70.08, y:50.13, w:1.67, h:7.57, videos:[], images:[], links:[]},
+  {id:"new_ti1zk5", name:"Dirty Pirates", era:"Wipe 9", desc:"", members:"", link:"", x:29.75, y:9.19, w:2, h:7.35, videos:[], images:[], links:[]},
+  {id:"new_326w33", name:"Bastion Joins BL", era:"Wipe 8", desc:"", members:"", link:"", x:39.08, y:22.37, w:3.58, h:1.49, videos:[], images:[], links:[]},
+  {id:"new_m7qkn0", name:"Mutton & Others join to fight borg", era:"", desc:"", members:"", link:"", x:42.42, y:39.42, w:21.92, h:0.77, videos:[], images:[], links:[]},
+  {id:"new_dzd4cz", name:"Update 29.3", era:"Patch", desc:"", members:"", link:"", x:81.64, y:23.8, w:18.36, h:0.83, videos:[], images:[], links:[]},
+  {id:"new_qeqsxs", name:"Update 28", era:"Patch", desc:"", members:"", link:"", x:81.3, y:27.05, w:19.09, h:0.99, videos:[], images:[], links:[]},
+  {id:"new_nayjl2", name:"Update 28.4", era:"Patch", desc:"", members:"", link:"", x:80.94, y:25.07, w:19.64, h:1.73, videos:[], images:[], links:[]},
+  {id:"new_7asagv", name:"Update 27", era:"Patch", desc:"", members:"", link:"", x:81.73, y:28.1, w:18.73, h:0.8, videos:[], images:[], links:[]},
+  {id:"new_23rmim", name:"Zatios's Crew", era:"Patch 8", desc:"", members:"", link:"", x:55.61, y:19.63, w:1.94, h:2.07, videos:[], images:[], links:[]},
+  {id:"new_4uobzv", name:"Gitlit and Biglet Join Bork", era:"Wipe 8", desc:"", members:"", link:"", x:28.82, y:26.49, w:10.48, h:0.83, videos:[], images:[], links:[]},
+  {id:"new_0h5uo9", name:"Casually Addicted", era:"Wipe 7", desc:"", members:"", link:"", x:36.45, y:33.57, w:2.06, h:3.34, videos:[], images:[], links:[]},
+  {id:"new_h14luk", name:"Rafu", era:"", desc:"", members:"", link:"", x:55.12, y:42.57, w:7.39, h:0.96, videos:[], images:[], links:[]},
+  {id:"new_6a5l16", name:"Red Cloud Pirates", era:"Wipe 4", desc:"", members:"", link:"", x:61.3, y:38.02, w:2.24, h:7.3, videos:[], images:[], links:[]},
+];
+
+/* ============================================================
+   WIPE LINES — user-placed horizontal markers (edit mode only)
+   that delineate where each Wipe band sits on the chart. Used to
+   auto-split a hotspot that spans multiple wipes into linked
+   per-wipe pieces. Defaults to empty — works fine with JSON that
+   doesn't have a wipeLines key yet.
+============================================================ */
+let WIPE_LINES = [];
+const ORIGINAL_WIPE_LINES = [];
+
+// Returns wipe bands (sorted top→bottom) covering 0–100%. Each band's label
+// comes from the wipe line BELOW it (i.e. a line marks the bottom edge / end
+// of the wipe named on it) — so content sitting just above a "Wipe 8" line
+// belongs to Wipe 8. The band below the very last line has no line under it,
+// so it's left unlabeled (nothing to auto-assign there).
+function computeWipeBands(){
+  const sorted = [...WIPE_LINES].sort((a,b)=> a.y - b.y);
+  const bands = [];
+  let prevY = 0;
+  sorted.forEach(line=>{
+    bands.push({top:prevY, bottom:line.y, label:line.label});
+    prevY = line.y;
+  });
+  bands.push({top:prevY, bottom:100, label:null});
+  return bands.filter(b=> b.bottom > b.top);
+}
+
+// Cuts EVERY hotspot on the chart against the current wipe lines in one pass:
+// anything fully inside one band just gets its era relabeled; anything that
+// straddles two or more bands gets sliced into per-band pieces which are
+// then auto-linked into one clique so they always highlight together.
+function applyWipeLinesToAllHotspots(){
+  if(WIPE_LINES.length === 0){
+    alert('No wipe lines on the chart yet. Add some with "＋ Add wipe line" first, then position each one at a wipe boundary.');
+    return;
+  }
+  const bands = computeWipeBands().filter(b=> b.label);
+  if(bands.length === 0){
+    alert('Every wipe line is unlabeled — give each one a wipe name first.');
+    return;
+  }
+
+  let splitCount = 0, relabelCount = 0;
+  const snapshot = [...HOTSPOTS];
+
+  snapshot.forEach(hs=>{
+    const hsTop = hs.y, hsBottom = hs.y + hs.h;
+    const overlapping = bands.filter(b=> b.bottom > hsTop && b.top < hsBottom);
+    if(overlapping.length === 0) return;
+
+    if(overlapping.length === 1){
+      if(hs.era !== overlapping[0].label){
+        hs.era = overlapping[0].label;
+        relabelCount++;
+        const div = stage.querySelector(`.hotspot[data-id="${hs.id}"]`);
+        if(div) div.setAttribute('aria-label', hs.name);
+      }
+      return;
+    }
+
+    // Straddles multiple bands — slice it.
+    const priorGroup = [...getConnectedGroup(hs.id)].filter(pid=> pid !== hs.id);
+    const pieces = overlapping.map((b, i)=>{
+      const top = Math.max(b.top, hsTop);
+      const bottom = Math.min(b.bottom, hsBottom);
+      const id = i === 0 ? hs.id : `${hs.id}_${wipeLineSlug(b.label)}_${Math.random().toString(36).slice(2,5)}`;
+      return {
+        id, name:hs.name, era:b.label,
+        desc: i===0 ? (hs.desc||'') : '',
+        members: i===0 ? (hs.members||'') : '',
+        link: i===0 ? (hs.link||'') : '',
+        x:hs.x, y:top, w:hs.w, h:bottom-top,
+        videos: i===0 ? (hs.videos||[]) : [],
+        images: i===0 ? (hs.images||[]) : [],
+        links: []
+      };
+    });
+
+    unlinkEverywhere(hs.id);
+    const idx = HOTSPOTS.findIndex(h=>h.id===hs.id);
+    if(idx>-1) HOTSPOTS.splice(idx,1);
+    const oldDiv = stage.querySelector(`.hotspot[data-id="${hs.id}"]`);
+    if(oldDiv) oldDiv.remove();
+    delete hotspotsById[hs.id];
+    delete hotspotEls[hs.id];
+
+    // Every new piece links to every other new piece, AND to whatever this
+    // crew was already linked to before the split (e.g. its other-wipe cuts).
+    pieces.forEach(p=>{ HOTSPOTS.push(p); buildHotspotEl(p); });
+    for(let i=1;i<pieces.length;i++) mergeLinkGroups(pieces[0].id, pieces[i].id);
+    priorGroup.forEach(pid=>{ if(hotspotsById[pid]) mergeLinkGroups(pieces[0].id, pid); });
+    splitCount++;
+  });
+
+  document.getElementById('hotspotCount').textContent = HOTSPOTS.length;
+  alert(`Done. Split ${splitCount} box${splitCount===1?'':'es'} across wipe lines, relabeled ${relabelCount} more.`);
+}
+
+function wipeLineSlug(label){
+  return (label||'wipe').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+}
+
+function buildWipeLineEl(wl){
+  const div = document.createElement('div');
+  div.className = 'wipe-line';
+  div.dataset.id = wl.id;
+  div.style.top = wl.y + '%';
+
+  const tag = document.createElement('div');
+  tag.className = 'wl-tag';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = wl.label;
+  input.addEventListener('input', ()=>{ wl.label = input.value; });
+  input.addEventListener('pointerdown', (e)=> e.stopPropagation());
+  const del = document.createElement('span');
+  del.className = 'wl-del';
+  del.textContent = '✕';
+  del.addEventListener('pointerdown', (e)=> e.stopPropagation());
+  del.addEventListener('click', ()=>{
+    WIPE_LINES = WIPE_LINES.filter(x=> x.id !== wl.id);
+    div.remove();
+  });
+  tag.appendChild(input);
+  tag.appendChild(del);
+  div.appendChild(tag);
+
+  div.addEventListener('pointerdown', (e)=>{
+    if(!editMode) return;
+    e.preventDefault();
+    div.setPointerCapture(e.pointerId);
+    const rect = stageRect();
+    function onMove(ev){
+      const yPct = clamp((ev.clientY - rect.top) / rect.height * 100, 0, 100);
+      wl.y = yPct;
+      div.style.top = yPct + '%';
+    }
+    function onUp(ev){
+      div.removeEventListener('pointermove', onMove);
+      div.removeEventListener('pointerup', onUp);
+      try{ div.releasePointerCapture(ev.pointerId); }catch(err){}
+    }
+    div.addEventListener('pointermove', onMove);
+    div.addEventListener('pointerup', onUp);
+  });
+
+  stage.appendChild(div);
+  return div;
+}
+
+
+const stage = document.getElementById('stage');
+const ORIGINAL_HOTSPOTS = JSON.parse(JSON.stringify(HOTSPOTS));
+document.getElementById('hotspotCount').textContent = HOTSPOTS.length;
+
+const hotspotsById = {};
+const hotspotEls = {};
+let editMode = false;
+let selectedId = null;
+
+function stageRect(){ return stage.getBoundingClientRect(); }
+function clamp(v, lo, hi){ return Math.min(hi, Math.max(lo, v)); }
+
+function buildHotspotEl(hs){
+  hs.links = hs.links || [];
+  const div = document.createElement('div');
+  div.className = 'hotspot';
+  div.dataset.id = hs.id;
+  div.style.left = hs.x + '%';
+  div.style.top = hs.y + '%';
+  div.style.width = hs.w + '%';
+  div.style.height = hs.h + '%';
+  div.tabIndex = 0;
+  div.setAttribute('role','button');
+  div.setAttribute('aria-label', hs.name);
+
+  const tip = document.createElement('div');
+  tip.className = 'tip';
+  tip.textContent = hs.name;
+  div.appendChild(tip);
+
+  const nameTag = document.createElement('div');
+  nameTag.className = 'name-tag';
+  nameTag.textContent = hs.name;
+  div.appendChild(nameTag);
+
+
+  const delBtn = document.createElement('div');
+  delBtn.className = 'del-btn';
+  delBtn.textContent = '✕';
+  delBtn.addEventListener('pointerdown', (e)=>{ e.stopPropagation(); });
+  delBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(!confirm(`Delete "${hs.name}"?`)) return;
+    unlinkEverywhere(hs.id);
+    const idx = HOTSPOTS.findIndex(h=>h.id===hs.id);
+    if(idx>-1) HOTSPOTS.splice(idx,1);
+    delete hotspotsById[hs.id];
+    delete hotspotEls[hs.id];
+    div.remove();
+    document.getElementById('hotspotCount').textContent = HOTSPOTS.length;
+  });
+  div.appendChild(delBtn);
+
+  ['nw','ne','sw','se'].forEach(corner=>{
+    const h = document.createElement('div');
+    h.className = 'handle ' + corner;
+    h.addEventListener('pointerdown', (e)=> startResize(e, hs, div, corner));
+    div.appendChild(h);
+  });
+
+  div.addEventListener('pointerdown', (e)=>{
+    if(!editMode) return;
+    if(e.target.classList.contains('handle') || e.target.classList.contains('del-btn')) return;
+    selectHotspot(hs.id, div);
+    startDrag(e, hs, div);
+  });
+
+  div.addEventListener('click', (e)=>{
+    if(editMode){ e.stopPropagation(); selectHotspot(hs.id, div); openEditForm(hs); return; }
+    openPanel(hs.id);
+  });
+  div.addEventListener('keydown', (e)=>{ if(!editMode && (e.key==='Enter' || e.key===' ')) openPanel(hs.id); });
+
+  div.addEventListener('mouseenter', ()=>{
+    highlightLinks(hs, true);
+    showOpponentLinesFor(hs);
+  });
+  div.addEventListener('mouseleave', ()=>{
+    highlightLinks(hs, false);
+    hideHoverLine();
+  });
+
+  hotspotsById[hs.id] = hs;
+  hotspotEls[hs.id] = div;
+  stage.appendChild(div);
+  return div;
+}
+
+function refreshLinkBadge(hs, badgeEl){
+  // Numeric link badges are intentionally not shown above hotspots.
+  // Linked items are still indicated by the hover glow (see highlightLinks()).
+}
+
+// Highlights every hotspot in the same linked group, however many hops away —
+// recomputed live via BFS so it's always correct even if two hotspots were
+// linked to a shared third party rather than directly to each other.
+function highlightLinks(hs, on){
+  const group = getConnectedGroup(hs.id);
+  group.forEach(linkedId=>{
+    if(linkedId === hs.id) return;
+    const el = hotspotEls[linkedId];
+    if(el) el.classList.toggle('linked-glow', on);
+  });
+}
+
+function unlinkEverywhere(id){
+  HOTSPOTS.forEach(h=>{
+    if(h.links && h.links.includes(id)){
+      h.links = h.links.filter(l=>l!==id);
+      refreshLinkBadge(h);
+    }
+  });
+}
+
+HOTSPOTS.forEach(buildHotspotEl);
+
+function selectHotspot(id, div){
+  document.querySelectorAll('.hotspot.selected').forEach(el=>el.classList.remove('selected'));
+  div.classList.add('selected');
+  selectedId = id;
+}
+
+function startDrag(e, hs, div){
+  e.preventDefault();
+  div.setPointerCapture(e.pointerId);
+  const rect = stageRect();
+  const startX = e.clientX, startY = e.clientY;
+  const origX = hs.x, origY = hs.y;
+
+  function onMove(ev){
+    const dxPct = (ev.clientX - startX) / rect.width * 100;
+    const dyPct = (ev.clientY - startY) / rect.height * 100;
+    hs.x = clamp(origX + dxPct, 0, 100 - hs.w);
+    hs.y = clamp(origY + dyPct, 0, 100 - hs.h);
+    div.style.left = hs.x + '%';
+    div.style.top = hs.y + '%';
+  }
+  function onUp(ev){
+    div.removeEventListener('pointermove', onMove);
+    div.removeEventListener('pointerup', onUp);
+  }
+  div.addEventListener('pointermove', onMove);
+  div.addEventListener('pointerup', onUp);
+}
+
+function startResize(e, hs, div, corner){
+  e.preventDefault();
+  e.stopPropagation();
+  selectHotspot(hs.id, div);
+  div.setPointerCapture(e.pointerId);
+  const rect = stageRect();
+  const startX = e.clientX, startY = e.clientY;
+  const orig = {x:hs.x, y:hs.y, w:hs.w, h:hs.h};
+
+  function onMove(ev){
+    const dxPct = (ev.clientX - startX) / rect.width * 100;
+    const dyPct = (ev.clientY - startY) / rect.height * 100;
+    let {x,y,w,h} = orig;
+    if(corner.includes('e')) w = clamp(orig.w + dxPct, 1.5, 100 - orig.x);
+    if(corner.includes('s')) h = clamp(orig.h + dyPct, 1.5, 100 - orig.y);
+    if(corner.includes('w')){
+      w = clamp(orig.w - dxPct, 1.5, orig.x + orig.w);
+      x = orig.x + orig.w - w;
+    }
+    if(corner.includes('n')){
+      h = clamp(orig.h - dyPct, 1.5, orig.y + orig.h);
+      y = orig.y + orig.h - h;
+    }
+    hs.x=x; hs.y=y; hs.w=w; hs.h=h;
+    div.style.left = x + '%'; div.style.top = y + '%';
+    div.style.width = w + '%'; div.style.height = h + '%';
+  }
+  function onUp(){
+    div.removeEventListener('pointermove', onMove);
+    div.removeEventListener('pointerup', onUp);
+  }
+  div.addEventListener('pointermove', onMove);
+  div.addEventListener('pointerup', onUp);
+}
+
+// draw a brand new hotspot by click-dragging empty chart area
+let drawing = null, drawBoxEl = null;
+stage.addEventListener('pointerdown', (e)=>{
+  if(!editMode) return;
+  if(e.target !== stage.querySelector('img') && e.target.id !== 'stage') return;
+  e.preventDefault();
+  stage.setPointerCapture(e.pointerId);
+  const rect = stageRect();
+  const startXPct = (e.clientX - rect.left) / rect.width * 100;
+  const startYPct = (e.clientY - rect.top) / rect.height * 100;
+  drawing = {startXPct, startYPct};
+  drawBoxEl = document.createElement('div');
+  drawBoxEl.className = 'draw-box';
+  stage.appendChild(drawBoxEl);
+
+  function onMove(ev){
+    const curXPct = (ev.clientX - rect.left) / rect.width * 100;
+    const curYPct = (ev.clientY - rect.top) / rect.height * 100;
+    const x = Math.min(startXPct, curXPct), y = Math.min(startYPct, curYPct);
+    const w = Math.abs(curXPct - startXPct), h = Math.abs(curYPct - startYPct);
+    drawBoxEl.style.left = x+'%'; drawBoxEl.style.top = y+'%';
+    drawBoxEl.style.width = w+'%'; drawBoxEl.style.height = h+'%';
+    drawing.rect = {x,y,w,h};
+  }
+  function onUp(ev){
+    stage.removeEventListener('pointermove', onMove);
+    stage.removeEventListener('pointerup', onUp);
+    stage.removeEventListener('pointercancel', onUp);
+    try{ stage.releasePointerCapture(ev.pointerId); }catch(err){}
+    if(drawBoxEl) drawBoxEl.remove();
+    const r = drawing && drawing.rect;
+    drawing = null;
+    if(r && r.w > 0.6 && r.h > 0.6){
+      const id = 'new_' + Math.random().toString(36).slice(2,8);
+      const hs = {id, name:'New hotspot', era:'', desc:'', x:r.x, y:r.y, w:r.w, h:r.h, videos:[], images:[], links:[]};
+      HOTSPOTS.push(hs);
+      const div = buildHotspotEl(hs);
+      selectHotspot(id, div);
+      openEditForm(hs);
+      document.getElementById('hotspotCount').textContent = HOTSPOTS.length;
+    }
+  }
+  stage.addEventListener('pointermove', onMove);
+  stage.addEventListener('pointerup', onUp);
+  stage.addEventListener('pointercancel', onUp);
+});
+
+// toolbar controls
+const editHint = document.getElementById('editHint');
+document.getElementById('editToggle').addEventListener('click', ()=>{
+  editMode = !editMode;
+  stage.classList.toggle('editing', editMode);
+  editHint.classList.toggle('show', editMode);
+  document.getElementById('editToggle').textContent = editMode ? '✓ Editing (click to stop)' : '✎ Edit positions';
+  if(!editMode){
+    document.querySelectorAll('.hotspot.selected').forEach(el=>el.classList.remove('selected'));
+    selectedId = null;
+    closeEditForm();
+  }
+});
+
+document.getElementById('addWipeLineBtn').addEventListener('click', ()=>{
+  const wl = {id:'wl_'+Math.random().toString(36).slice(2,8), label:'New Wipe', y:50};
+  WIPE_LINES.push(wl);
+  buildWipeLineEl(wl);
+  if(!editMode) document.getElementById('editToggle').click();
+});
+
+document.getElementById('applyWipeLinesBtn').addEventListener('click', applyWipeLinesToAllHotspots);
+
+document.getElementById('downloadBtn').addEventListener('click', ()=>{
+  const clean = HOTSPOTS.map(h=>({
+    id:h.id, name:h.name, era:h.era||'', desc:h.desc||'', members:h.members||'', link:h.link||'',
+    x:Math.round(h.x*100)/100, y:Math.round(h.y*100)/100,
+    w:Math.round(h.w*100)/100, h:Math.round(h.h*100)/100,
+    videos:h.videos||[], images:h.images||[], links:h.links||[]
+  }));
+  const wipeLinesClean = WIPE_LINES.map(wl=>({id:wl.id, label:wl.label, y:Math.round(wl.y*100)/100}));
+  const payload = {hotspots: clean, wipeLines: wipeLinesClean};
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'worlds_adrift_hotspots.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  document.getElementById('importFile').click();
+});
+document.getElementById('importFile').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const raw = JSON.parse(reader.result);
+      // Accept both the old plain-array format and the new {hotspots, wipeLines} format
+      const data = Array.isArray(raw) ? raw : (raw.hotspots || []);
+      const wipeLines = Array.isArray(raw) ? [] : (raw.wipeLines || []);
+      if(!Array.isArray(data)) throw new Error('not an array');
+      document.querySelectorAll('.hotspot').forEach(el=>el.remove());
+      document.querySelectorAll('.wipe-line').forEach(el=>el.remove());
+      HOTSPOTS.length = 0;
+      Object.keys(hotspotsById).forEach(k=>delete hotspotsById[k]);
+      Object.keys(hotspotEls).forEach(k=>delete hotspotEls[k]);
+      data.forEach(hs=>{
+        const clean = {id:hs.id, name:hs.name, era:hs.era||'', desc:hs.desc||'', members:hs.members||'', link:hs.link||'', x:+hs.x, y:+hs.y, w:+hs.w, h:+hs.h, videos:hs.videos||[], images:hs.images||[], links:hs.links||[]};
+        HOTSPOTS.push(clean);
+        buildHotspotEl(clean);
+      });
+      WIPE_LINES = wipeLines.map(wl=>({id:wl.id||('wl_'+Math.random().toString(36).slice(2,8)), label:wl.label||'Wipe', y:+wl.y}));
+      WIPE_LINES.forEach(buildWipeLineEl);
+      document.getElementById('hotspotCount').textContent = HOTSPOTS.length;
+      alert(`Imported ${HOTSPOTS.length} hotspots and ${WIPE_LINES.length} wipe lines.`);
+    }catch(err){
+      alert('Could not read that file as hotspot JSON: ' + err.message);
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  if(!confirm('Reset every hotspot back to its original position? This discards your edits.')) return;
+  document.querySelectorAll('.hotspot').forEach(el=>el.remove());
+  document.querySelectorAll('.wipe-line').forEach(el=>el.remove());
+  HOTSPOTS.length = 0;
+  Object.keys(hotspotsById).forEach(k=>delete hotspotsById[k]);
+  Object.keys(hotspotEls).forEach(k=>delete hotspotEls[k]);
+  JSON.parse(JSON.stringify(ORIGINAL_HOTSPOTS)).forEach(hs=>{ HOTSPOTS.push(hs); buildHotspotEl(hs); });
+  WIPE_LINES = JSON.parse(JSON.stringify(ORIGINAL_WIPE_LINES));
+  WIPE_LINES.forEach(buildWipeLineEl);
+  document.getElementById('hotspotCount').textContent = HOTSPOTS.length;
+});
+
+/* ============================================================
+   MEDIA URL PARSING
+============================================================ */
+const OUTCOME_ORDER = ["Got Sunk","Clear Defeat","Partial Defeat","Tie","Partial Victory","Clear Victory","Sunk"];
+const OUTCOME_SCORES = {
+  "Got Sunk": -3, "Clear Defeat": -2, "Partial Defeat": -1, "Tie": 0,
+  "Partial Victory": 1, "Clear Victory": 2, "Sunk": 3
+};
+const OUTCOME_COLORS = {
+  "Got Sunk": "#a84b32", "Clear Defeat": "#c05f3e", "Partial Defeat": "#c9915a",
+  "Tie": "#8fa3ad", "Partial Victory": "#7fae7f", "Clear Victory": "#4f8f82", "Sunk": "#2f9e6f"
+};
+// From the opponent's side, a win becomes a loss and vice versa.
+const OUTCOME_INVERSE = {
+  "Got Sunk": "Sunk", "Sunk": "Got Sunk",
+  "Clear Defeat": "Clear Victory", "Clear Victory": "Clear Defeat",
+  "Partial Defeat": "Partial Victory", "Partial Victory": "Partial Defeat",
+  "Tie": "Tie"
+};
+
+function parseMediaUrl(url){
+  url = url.trim();
+  // YouTube: watch?v=, youtu.be/, shorts/, embed/
+  let m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{6,})/);
+  if(m) return {type:'youtube', embedId:m[1], url, thumb:`https://img.youtube.com/vi/${m[1]}/hqdefault.jpg`};
+  // Twitch VOD: twitch.tv/videos/12345
+  m = url.match(/twitch\.tv\/videos\/(\d+)/);
+  if(m) return {type:'twitch-vod', embedId:m[1], url, thumb:''};
+  // Twitch clip: clips.twitch.tv/ClipName or twitch.tv/channel/clip/ClipName
+  m = url.match(/clips\.twitch\.tv\/([A-Za-z0-9_-]+)/) || url.match(/twitch\.tv\/[^/]+\/clip\/([A-Za-z0-9_-]+)/);
+  if(m) return {type:'twitch-clip', embedId:m[1], url, thumb:''};
+  return null;
+}
+
+function mediaEmbedHtml(v){
+  const parent = location.hostname || 'localhost';
+  if(v.type === 'youtube'){
+    return `<iframe src="https://www.youtube.com/embed/${v.embedId}" title="${v.title||''}" allowfullscreen></iframe>`;
+  }
+  if(v.type === 'twitch-vod'){
+    return `<iframe src="https://player.twitch.tv/?video=${v.embedId}&parent=${parent}&autoplay=false" allowfullscreen></iframe>`;
+  }
+  if(v.type === 'twitch-clip'){
+    return `<iframe src="https://clips.twitch.tv/embed?clip=${v.embedId}&parent=${parent}&autoplay=false" allowfullscreen></iframe>`;
+  }
+  return `<div class="placeholder-card">Unrecognized link: ${v.url}</div>`;
+}
+
+function badgeHtml(type){
+  if(type==='youtube') return `<span class="platform-badge youtube">YouTube</span>`;
+  if(type && type.startsWith('twitch')) return `<span class="platform-badge twitch">Twitch</span>`;
+  return '';
+}
+
+function outcomeBadgeHtml(outcome){
+  if(!outcome) return '';
+  const c = OUTCOME_COLORS[outcome] || 'var(--fog)';
+  return `<span class="platform-badge" style="background:${c};color:#fff;">${outcome}</span>`;
+}
+
+/* ---- Hover lines between a crew and the opponent(s) tagged on its videos ---- */
+const SVGNS = "http://www.w3.org/2000/svg";
+
+function clearHoverLines(){
+  document.getElementById('linkOverlay').querySelectorAll('.hover-line-dyn').forEach(el=> el.remove());
+}
+
+// Total fight count between two specific crews, counting videos tagged in
+// either direction (A's POV videos vs B, plus B's POV videos vs A).
+function countFightsBetween(hsA, hsB){
+  const a = (hsA.videos||[]).filter(v=> v.opponentId === hsB.id).length;
+  const b = (hsB.videos||[]).filter(v=> v.opponentId === hsA.id).length;
+  return a + b;
+}
+
+const HOVER_LINE_MIN_W = 0.09;
+const HOVER_LINE_STEP_W = 0.055;
+const HOVER_LINE_MAX_W = 0.7;
+
+function drawHoverLine(fromHs, toHs){
+  if(!fromHs || !toHs) return;
+  const svg = document.getElementById('linkOverlay');
+  const x1 = fromHs.x + fromHs.w/2, y1 = fromHs.y + fromHs.h/2;
+  const x2 = toHs.x + toHs.w/2, y2 = toHs.y + toHs.h/2;
+  const fightCount = Math.max(countFightsBetween(fromHs, toHs), 1);
+  const width = Math.min(HOVER_LINE_MIN_W + (fightCount - 1) * HOVER_LINE_STEP_W, HOVER_LINE_MAX_W);
+
+  const line = document.createElementNS(SVGNS, 'line');
+  line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+  line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+  line.setAttribute('class', 'hover-line-dyn');
+  line.style.strokeWidth = width;
+  svg.appendChild(line);
+
+  [[x1,y1],[x2,y2]].forEach(([cx,cy])=>{
+    const c = document.createElementNS(SVGNS, 'circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy);
+    c.setAttribute('r', Math.max(width * 1.4, 0.35));
+    c.setAttribute('class', 'hover-line-dyn');
+    svg.appendChild(c);
+  });
+}
+
+// Draws a line (thickness = how many times they fought) to every opponent
+// tagged across all of this hotspot's videos.
+function showOpponentLinesFor(hs){
+  clearHoverLines();
+  const opponentIds = [...new Set((hs.videos||[]).map(v=>v.opponentId).filter(Boolean))];
+  opponentIds.forEach(oid=>{
+    const target = hotspotsById[oid];
+    if(target) drawHoverLine(hs, target);
+  });
+}
+
+function hideHoverLine(){ clearHoverLines(); }
+
+/* ---- Auto-fill video title from YouTube's public oEmbed endpoint (no API key needed) ---- */
+async function fetchYoutubeTitle(videoId){
+  try{
+    const res = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent('https://www.youtube.com/watch?v='+videoId)}&format=json`);
+    if(!res.ok) return null;
+    const data = await res.json();
+    return data.title || null;
+  }catch(e){ return null; }
+}
+
+
+/* ============================================================
+   PANEL (view mode)
+============================================================ */
+const overlay = document.getElementById('overlay');
+const panelEra = document.getElementById('panelEra');
+const panelName = document.getElementById('panelName');
+const panelDates = document.getElementById('panelDates');
+const panelDesc = document.getElementById('panelDesc');
+const panelMembers = document.getElementById('panelMembers');
+const panelLink = document.getElementById('panelLink');
+const panelVideos = document.getElementById('panelVideos');
+const panelVideoTabs = document.getElementById('panelVideoTabs');
+const panelImages = document.getElementById('panelImages');
+const panelImagesHeading = document.getElementById('panelImagesHeading');
+const panelChart = document.getElementById('panelChart');
+let activeVideoTab = 'pov';
+
+function escapeHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Finds every video, on ANY hotspot, whose tagged opponent is this hotspot —
+// i.e. fights the other crew recorded against this one. Outcome is flipped
+// (their Clear Victory = our Clear Defeat) since we're seeing it from our side.
+function getReciprocalVideos(hs){
+  const result = [];
+  HOTSPOTS.forEach(other=>{
+    if(other.id === hs.id) return;
+    (other.videos||[]).forEach(v=>{
+      if(v.opponentId === hs.id){
+        result.push(Object.assign({}, v, {
+          outcome: OUTCOME_INVERSE[v.outcome] || v.outcome,
+          _sourceId: other.id,
+          _sourceName: other.name
+        }));
+      }
+    });
+  });
+  return result;
+}
+
+function scoreOf(hs){
+  const own = (hs.videos||[]).reduce((sum,v)=> sum + (OUTCOME_SCORES[v.outcome] || 0), 0);
+  const recip = getReciprocalVideos(hs).reduce((sum,v)=> sum + (OUTCOME_SCORES[v.outcome] || 0), 0);
+  return own + recip;
+}
+
+function recordOf(hs){
+  const rec = {};
+  OUTCOME_ORDER.forEach(o=> rec[o]=0);
+  (hs.videos||[]).forEach(v=>{ if(v.outcome && rec[v.outcome]!==undefined) rec[v.outcome]++; });
+  getReciprocalVideos(hs).forEach(v=>{ if(v.outcome && rec[v.outcome]!==undefined) rec[v.outcome]++; });
+  return rec;
+}
+
+// Ranks crews against every other hotspot sharing the same "Wipe N" era,
+// based on the total score of outcome-tagged videos. (Kept for potential
+// future use; the panel now shows a fight-outcome bar chart instead.)
+function computeWipeRanking(hs){
+  if(!hs.era || !/wipe/i.test(hs.era)) return null;
+  const peers = HOTSPOTS.filter(h=> h.era === hs.era && (h.videos||[]).some(v=>v.outcome));
+  if(peers.length === 0) return null;
+  const ranked = peers
+    .map(h=>({h, score:scoreOf(h)}))
+    .sort((a,b)=> b.score - a.score);
+  const rank = ranked.findIndex(r=> r.h.id === hs.id);
+  if(rank === -1) return null; // hs itself has no outcome-tagged videos
+  return {rank: rank+1, total: ranked.length, score: ranked[rank].score};
+}
+
+function openPanel(id){
+  const hs = hotspotsById[id];
+  panelEra.textContent = hs.era || '';
+  panelName.textContent = hs.name;
+  panelDates.textContent = '';
+
+  panelDesc.textContent = hs.desc || '';
+  panelDesc.style.display = hs.desc ? 'block' : 'none';
+
+  if(hs.members){
+    panelMembers.innerHTML = `<b>Members:</b> ${escapeHtml(hs.members).replace(/\n/g,'<br>')}`;
+    panelMembers.style.display = 'block';
+  } else {
+    panelMembers.style.display = 'none';
+  }
+
+  if(hs.link){
+    panelLink.innerHTML = `<a href="${hs.link}" target="_blank" rel="noopener" style="color:var(--brass);">↗ ${escapeHtml(hs.link)}</a>`;
+    panelLink.style.display = 'block';
+  } else {
+    panelLink.style.display = 'none';
+  }
+
+  activeVideoTab = 'pov';
+  renderVideoTabs(hs);
+  renderVideoGrid(hs);
+
+  const hasImages = hs.images && hs.images.length > 0;
+  panelImages.innerHTML = '';
+  panelImagesHeading.style.display = hasImages ? 'block' : 'none';
+  (hs.images||[]).forEach(img=>{
+    const card = document.createElement('div');
+    card.className = 'img-card';
+    const src = img.url || img.dataUrl || '';
+    card.innerHTML = `<img src="${src}" alt="${img.title||''}" loading="lazy" decoding="async">` + (img.title ? `<div class="video-title">${img.title}</div>` : '');
+    panelImages.appendChild(card);
+  });
+
+  renderOutcomeChart(hs);
+  overlay.classList.add('open');
+}
+
+function renderVideoTabs(hs){
+  const povCount = (hs.videos||[]).length;
+  const reciprocal = getReciprocalVideos(hs);
+  const enemyCount = reciprocal.length;
+
+  if(povCount === 0 && enemyCount === 0){
+    panelVideoTabs.innerHTML = '';
+    return;
+  }
+  panelVideoTabs.innerHTML = `
+    <div class="video-tab ${activeVideoTab==='pov'?'active':''}" data-tab="pov">POV (${povCount})</div>
+    <div class="video-tab ${activeVideoTab==='enemy'?'active':''}" data-tab="enemy">Enemy's POV (${enemyCount})</div>
+  `;
+  panelVideoTabs.querySelectorAll('.video-tab').forEach(tabEl=>{
+    tabEl.addEventListener('click', ()=>{
+      activeVideoTab = tabEl.dataset.tab;
+      renderVideoTabs(hs);
+      renderVideoGrid(hs);
+    });
+  });
+}
+
+function renderVideoGrid(hs){
+  panelVideos.innerHTML = '';
+  const list = activeVideoTab === 'pov' ? (hs.videos||[]) : getReciprocalVideos(hs);
+
+  if(list.length === 0){
+    const ph = document.createElement('div');
+    ph.className = 'placeholder-card';
+    ph.innerHTML = activeVideoTab === 'pov'
+      ? `No videos uploaded yet for <strong>${hs.name}</strong>.<br><br>Switch to Edit mode and open this hotspot to add a YouTube/Twitch link.`
+      : `No opponent has tagged <strong>${hs.name}</strong> in one of their fight videos yet.`;
+    panelVideos.appendChild(ph);
+    return;
+  }
+
+  list.forEach(v=>{
+    const card = document.createElement('div');
+    card.className = 'video-card';
+    const thumbInner = v.thumb
+      ? `<img src="${v.thumb}" alt="" loading="lazy" decoding="async">`
+      : `<div class="thumb-fallback">${(badgeHtml(v.type)||'Video').replace(/<[^>]+>/g,'')}</div>`;
+    const sourceLine = v._sourceName ? `<br><span style="opacity:.65;">from ${escapeHtml(v._sourceName)}</span>` : '';
+    card.innerHTML = `
+      <div class="thumb-wrap"><div class="play-icon">▶</div>${thumbInner}</div>
+      <div class="video-title">${badgeHtml(v.type)}${outcomeBadgeHtml(v.outcome)}<br>${escapeHtml(v.title||'Untitled')}${sourceLine}</div>`;
+    card.querySelector('.thumb-wrap').addEventListener('click', ()=> window.open(v.url, '_blank'));
+    panelVideos.appendChild(card);
+  });
+}
+
+// Bar chart of how many fights fell into each outcome bucket, drawn below the videos.
+function renderOutcomeChart(hs){
+  const rec = recordOf(hs);
+  const total = OUTCOME_ORDER.reduce((s,o)=> s + rec[o], 0);
+  if(total === 0){
+    panelChart.innerHTML = '';
+    return;
+  }
+  const max = Math.max(...OUTCOME_ORDER.map(o=> rec[o]), 1);
+  let html = `<div class="chart-title">Fight record</div><div class="outcome-chart">`;
+  OUTCOME_ORDER.forEach(o=>{
+    const count = rec[o];
+    const pct = count > 0 ? Math.max((count / max) * 100, 6) : 0;
+    html += `
+      <div class="oc-col">
+        <div class="oc-bar-wrap">
+          ${count > 0 ? `<div class="oc-count">${count}</div>` : ''}
+          <div class="oc-bar" style="height:${pct}%;background:${OUTCOME_COLORS[o]};"></div>
+        </div>
+        <div class="oc-label">${o}</div>
+      </div>`;
+  });
+  html += `</div>`;
+  panelChart.innerHTML = html;
+}
+
+document.getElementById('closeBtn').addEventListener('click', ()=> overlay.classList.remove('open'));
+overlay.addEventListener('click', (e)=>{ if(e.target === overlay) overlay.classList.remove('open'); });
+document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape'){ overlay.classList.remove('open'); closeEditForm(); } });
+
+/* ============================================================
+   EDIT FORM (edit mode) — name, era, description, media, images
+============================================================ */
+const editForm = document.getElementById('editForm');
+const efName = document.getElementById('efName');
+const efEra = document.getElementById('efEra');
+const efDesc = document.getElementById('efDesc');
+const efMembers = document.getElementById('efMembers');
+const efLink = document.getElementById('efLink');
+const efMediaUrl = document.getElementById('efMediaUrl');
+const efMediaList = document.getElementById('efMediaList');
+const efImageUrl = document.getElementById('efImageUrl');
+const efImageList = document.getElementById('efImageList');
+let currentEditHs = null;
+
+function openEditForm(hs){
+  currentEditHs = hs;
+  efName.value = hs.name || '';
+  efEra.value = hs.era || '';
+  efDesc.value = hs.desc || '';
+  efMembers.value = hs.members || '';
+  efLink.value = hs.link || '';
+  refreshOpponentDatalist(hs.id, hs.era);
+  renderMediaList();
+  renderImageList();
+  refreshLinkSelect();
+  renderLinkList();
+  editForm.classList.add('open');
+}
+function closeEditForm(){
+  editForm.classList.remove('open');
+  currentEditHs = null;
+}
+
+function syncLiveLabel(){
+  if(!currentEditHs) return;
+  const div = stage.querySelector(`.hotspot[data-id="${currentEditHs.id}"]`);
+  if(!div) return;
+  div.querySelector('.tip').textContent = currentEditHs.name;
+  div.querySelector('.name-tag').textContent = currentEditHs.name;
+  div.setAttribute('aria-label', currentEditHs.name);
+}
+
+efName.addEventListener('input', ()=>{ if(currentEditHs){ currentEditHs.name = efName.value; syncLiveLabel(); }});
+efEra.addEventListener('input', ()=>{ if(currentEditHs) currentEditHs.era = efEra.value; });
+efDesc.addEventListener('input', ()=>{ if(currentEditHs) currentEditHs.desc = efDesc.value; });
+efMembers.addEventListener('input', ()=>{ if(currentEditHs) currentEditHs.members = efMembers.value; });
+efLink.addEventListener('input', ()=>{ if(currentEditHs) currentEditHs.link = efLink.value; });
+
+document.getElementById('editFormClose').addEventListener('click', closeEditForm);
+
+const opponentNameToId = {};
+
+function opponentLabel(h){
+  return h.era ? `${h.name} — ${h.era}` : h.name;
+}
+
+function refreshOpponentDatalist(excludeId, requiredEra){
+  const datalist = document.getElementById('opponentOptions');
+  datalist.innerHTML = '';
+  Object.keys(opponentNameToId).forEach(k=> delete opponentNameToId[k]);
+  HOTSPOTS
+    .filter(h=> h.id !== excludeId)
+    .filter(h=> !requiredEra || h.era === requiredEra) // fights can only be tagged against a crew from the SAME wipe
+    .sort((a,b)=> a.name.localeCompare(b.name))
+    .forEach(h=>{
+      const label = opponentLabel(h);
+      opponentNameToId[label] = h.id;
+      const opt = document.createElement('option');
+      opt.value = label;
+      datalist.appendChild(opt);
+    });
+}
+
+function resolveOpponentLabel(label){
+  return opponentNameToId[label.trim()] || '';
+}
+
+function labelForOpponentId(id){
+  const h = hotspotsById[id];
+  return h ? opponentLabel(h) : '';
+}
+
+function renderMediaList(){
+  efMediaList.innerHTML = '';
+  (currentEditHs.videos||[]).forEach((v, idx)=>{
+    const row = document.createElement('div');
+    row.className = 'media-item';
+    row.style.flexWrap = 'wrap';
+
+    const thumbHtml = v.thumb ? `<img src="${v.thumb}" loading="lazy" decoding="async">` : '';
+    const head = document.createElement('div');
+    head.style.cssText = 'display:flex;align-items:center;gap:8px;flex:1;min-width:0;';
+    head.innerHTML = `${thumbHtml}${badgeHtml(v.type)}${outcomeBadgeHtml(v.outcome)}`;
+
+    const titleInput = document.createElement('input');
+    titleInput.type = 'text';
+    titleInput.value = v.title || '';
+    titleInput.placeholder = 'Video title…';
+    titleInput.style.cssText = 'flex:1;min-width:80px;background:rgba(0,0,0,.2);border:1px solid rgba(143,163,173,.25);border-radius:5px;color:var(--parchment);padding:4px 7px;font-size:12px;';
+    titleInput.addEventListener('input', ()=>{ v.title = titleInput.value; });
+    head.appendChild(titleInput);
+
+    const del = document.createElement('button');
+    del.textContent = '✕';
+    del.addEventListener('click', ()=>{ currentEditHs.videos.splice(idx,1); renderMediaList(); });
+    head.appendChild(del);
+    row.appendChild(head);
+
+    const oppRow = document.createElement('div');
+    oppRow.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;margin-top:6px;';
+    const oppInput = document.createElement('input');
+    oppInput.type = 'text';
+    oppInput.className = 'opponent-search';
+    oppInput.setAttribute('list', 'opponentOptions');
+    oppInput.autocomplete = 'off';
+    oppInput.placeholder = '🔍 Fought against…';
+    oppInput.style.cssText = 'flex:1;font-size:11.5px;padding:4px 6px;';
+    oppInput.value = labelForOpponentId(v.opponentId);
+    oppInput.addEventListener('change', ()=>{
+      v.opponentId = oppInput.value.trim() ? resolveOpponentLabel(oppInput.value) : '';
+    });
+    oppRow.appendChild(oppInput);
+    row.appendChild(oppRow);
+
+    row.addEventListener('mouseenter', ()=>{
+      if(v.opponentId && hotspotsById[v.opponentId]) drawHoverLine(currentEditHs, hotspotsById[v.opponentId]);
+    });
+    row.addEventListener('mouseleave', hideHoverLine);
+
+    efMediaList.appendChild(row);
+  });
+}
+
+document.getElementById('efMediaAdd').addEventListener('click', async ()=>{
+  if(!currentEditHs) return;
+  const url = efMediaUrl.value.trim();
+  if(!url) return;
+  const parsed = parseMediaUrl(url);
+  if(!parsed){
+    alert("That doesn't look like a YouTube or Twitch link I can recognize. Supported: youtube.com/watch?v=…, youtu.be/…, twitch.tv/videos/…, clips.twitch.tv/…");
+    return;
+  }
+  const outcome = document.getElementById('efMediaOutcome').value;
+  const opponentText = document.getElementById('efMediaOpponent').value.trim();
+  const opponentId = opponentText ? resolveOpponentLabel(opponentText) : '';
+  const video = {
+    type:parsed.type, embedId:parsed.embedId, url:parsed.url,
+    title: parsed.type === 'youtube' ? 'Loading title…' : parsed.url,
+    outcome, thumb:parsed.thumb||'', opponentId
+  };
+  currentEditHs.videos = currentEditHs.videos || [];
+  currentEditHs.videos.push(video);
+  efMediaUrl.value = '';
+  document.getElementById('efMediaOutcome').value = '';
+  document.getElementById('efMediaOpponent').value = '';
+  renderMediaList();
+
+  if(parsed.type === 'youtube'){
+    const fetched = await fetchYoutubeTitle(parsed.embedId);
+    video.title = fetched || parsed.url;
+    renderMediaList();
+  }
+});
+
+function renderImageList(){
+  efImageList.innerHTML = '';
+  (currentEditHs.images||[]).forEach((img, idx)=>{
+    const row = document.createElement('div');
+    row.className = 'media-item';
+    const src = img.url || img.dataUrl || '';
+    row.innerHTML = `<img src="${src}" loading="lazy" decoding="async"><span class="mi-title">${img.title || 'Screenshot'}</span>`;
+    const del = document.createElement('button');
+    del.textContent = '✕';
+    del.addEventListener('click', ()=>{ currentEditHs.images.splice(idx,1); renderImageList(); });
+    row.appendChild(del);
+    efImageList.appendChild(row);
+  });
+}
+
+document.getElementById('efImageAdd').addEventListener('click', ()=>{
+  if(!currentEditHs) return;
+  const url = efImageUrl.value.trim();
+  if(!url) return;
+  if(!/^https?:\/\//i.test(url)){
+    alert("That doesn't look like a URL. Paste a direct link to an image (right-click an uploaded image on postimages.org → Copy Image Address).");
+    return;
+  }
+  const title = prompt('Caption for this screenshot (optional):', '') || '';
+  currentEditHs.images = currentEditHs.images || [];
+  currentEditHs.images.push({title, url});
+  efImageUrl.value = '';
+  renderImageList();
+});
+
+/* ---- Linked hotspots ---- */
+const efLinkSelect = document.getElementById('efLinkSelect');
+const efLinkList = document.getElementById('efLinkList');
+
+function refreshLinkSelect(){
+  if(!currentEditHs) return;
+  efLinkSelect.innerHTML = '';
+  const already = new Set(currentEditHs.links||[]);
+  HOTSPOTS
+    .filter(h=>h.id !== currentEditHs.id && !already.has(h.id))
+    .sort((a,b)=> a.name.localeCompare(b.name))
+    .forEach(h=>{
+      const opt = document.createElement('option');
+      opt.value = h.id;
+      opt.textContent = h.name + (h.era ? ` (${h.era})` : '');
+      efLinkSelect.appendChild(opt);
+    });
+}
+
+function renderLinkList(){
+  efLinkList.innerHTML = '';
+  (currentEditHs.links||[]).forEach(linkedId=>{
+    const target = hotspotsById[linkedId];
+    const row = document.createElement('div');
+    row.className = 'media-item';
+    row.innerHTML = `<span class="platform-badge twitch" style="background:var(--verdigris);">Linked</span><span class="mi-title">${target ? target.name : linkedId}</span>`;
+    const del = document.createElement('button');
+    del.textContent = '✕';
+    del.addEventListener('click', ()=>{
+      currentEditHs.links = (currentEditHs.links||[]).filter(l=>l!==linkedId);
+      if(target){ target.links = (target.links||[]).filter(l=>l!==currentEditHs.id); refreshLinkBadge(target); }
+      refreshLinkBadge(currentEditHs);
+      refreshLinkSelect();
+      renderLinkList();
+    });
+    row.appendChild(del);
+    efLinkList.appendChild(row);
+  });
+}
+
+function getConnectedGroup(startId){
+  const seen = new Set([startId]);
+  const stack = [startId];
+  while(stack.length){
+    const cur = stack.pop();
+    const hs = hotspotsById[cur];
+    if(!hs) continue;
+    (hs.links||[]).forEach(nid=>{
+      if(!seen.has(nid)){ seen.add(nid); stack.push(nid); }
+    });
+  }
+  return seen;
+}
+
+function mergeLinkGroups(idA, idB){
+  const groupA = getConnectedGroup(idA);
+  const groupB = getConnectedGroup(idB);
+  const union = new Set([...groupA, ...groupB]);
+  union.forEach(id=>{
+    const hs = hotspotsById[id];
+    if(!hs) return;
+    hs.links = [...union].filter(otherId=> otherId !== id);
+  });
+  return union;
+}
+
+document.getElementById('efLinkAdd').addEventListener('click', ()=>{
+  if(!currentEditHs) return;
+  const targetId = efLinkSelect.value;
+  if(!targetId) return;
+  const target = hotspotsById[targetId];
+  if(!target) return;
+  mergeLinkGroups(currentEditHs.id, targetId);
+  refreshLinkSelect();
+  renderLinkList();
+});
+
+document.getElementById('efDelete').addEventListener('click', ()=>{
+  if(!currentEditHs) return;
+  if(!confirm(`Delete "${currentEditHs.name}"?`)) return;
+  unlinkEverywhere(currentEditHs.id);
+  const idx = HOTSPOTS.findIndex(h=>h.id===currentEditHs.id);
+  if(idx>-1) HOTSPOTS.splice(idx,1);
+  const div = stage.querySelector(`.hotspot[data-id="${currentEditHs.id}"]`);
+  if(div) div.remove();
+  delete hotspotsById[currentEditHs.id];
+  delete hotspotEls[currentEditHs.id];
+  document.getElementById('hotspotCount').textContent = HOTSPOTS.length;
+  closeEditForm();
+});
+
+document.getElementById('efSplitBtn').addEventListener('click', ()=>{
+  if(!currentEditHs) return;
+  const hs = currentEditHs;
+  const bands = computeWipeBands().filter(b=> b.label); // ignore the unlabeled leading band
+  const hsTop = hs.y, hsBottom = hs.y + hs.h;
+  const overlapping = bands.filter(b=> b.bottom > hsTop && b.top < hsBottom);
+
+  if(WIPE_LINES.length === 0){
+    alert('No wipe lines on the chart yet. Add some with "＋ Add wipe line" in the toolbar first.');
+    return;
+  }
+  if(overlapping.length <= 1){
+    alert('This box only overlaps one wipe band — nothing to split.');
+    return;
+  }
+
+  const priorGroup = [...getConnectedGroup(hs.id)].filter(pid=> pid !== hs.id);
+  const pieces = overlapping.map((b, i)=>{
+    const top = Math.max(b.top, hsTop);
+    const bottom = Math.min(b.bottom, hsBottom);
+    const id = i === 0 ? hs.id : `${hs.id}_${wipeLineSlug(b.label)}_${Math.random().toString(36).slice(2,5)}`;
+    return {
+      id, name:hs.name, era:b.label,
+      desc: i===0 ? (hs.desc||'') : '',
+      members: i===0 ? (hs.members||'') : '',
+      link: i===0 ? (hs.link||'') : '',
+      x:hs.x, y:top, w:hs.w, h:bottom-top,
+      videos: i===0 ? (hs.videos||[]) : [],
+      images: i===0 ? (hs.images||[]) : [],
+      links: []
+    };
+  });
+
+  // remove the original
+  unlinkEverywhere(hs.id);
+  const idx = HOTSPOTS.findIndex(h=>h.id===hs.id);
+  if(idx>-1) HOTSPOTS.splice(idx,1);
+  const oldDiv = stage.querySelector(`.hotspot[data-id="${hs.id}"]`);
+  if(oldDiv) oldDiv.remove();
+  delete hotspotsById[hs.id];
+  delete hotspotEls[hs.id];
+
+  // add the new pieces, link them all together, and reconnect to whatever
+  // this crew was already linked to before the split (other-wipe cuts, etc.)
+  pieces.forEach(p=>{ HOTSPOTS.push(p); buildHotspotEl(p); });
+  for(let i=1;i<pieces.length;i++) mergeLinkGroups(pieces[0].id, pieces[i].id);
+  priorGroup.forEach(pid=>{ if(hotspotsById[pid]) mergeLinkGroups(pieces[0].id, pid); });
+
+  document.getElementById('hotspotCount').textContent = HOTSPOTS.length;
+  closeEditForm();
+  alert(`Split into ${pieces.length} pieces across: ${overlapping.map(b=>b.label).join(', ')}. They're linked and will highlight together.`);
+});
+</script>
+
+</body>
+</html>
