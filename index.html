@@ -16,16 +16,24 @@
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
-    background:
-      radial-gradient(1200px 600px at 15% -10%, #1c3247 0%, transparent 60%),
-      radial-gradient(1000px 700px at 100% 0%, #23374a 0%, transparent 55%),
-      linear-gradient(180deg, var(--sky-deep), var(--ink) 90%);
+    position:relative;
+    background:var(--ink);
     color:var(--parchment);
     font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
     min-height:100vh;
   }
+  body::before{
+    content:"";
+    position:absolute; inset:0; z-index:-1;
+    background-image:url('background.png');
+    background-size:100% auto;
+    background-position:center center;
+    background-repeat:no-repeat;
+    filter:blur(12px) brightness(0.80);
+    transform:scale(1.05);
+  }
   .display{ font-family: 'Copperplate', 'Trajan Pro', Georgia, serif; letter-spacing:.04em; }
-  header{ padding:44px 5vw 20px; border-bottom:1px solid rgba(192,138,62,.35); }
+  header{ padding:14px 5vw 6px; }
   h1{ font-size:clamp(28px,4.2vw,52px); margin:0 0 6px; text-shadow:0 2px 0 rgba(0,0,0,.4); }
   h1 span{color:var(--brass);}
   .sub{ color:var(--fog); font-size:14px; letter-spacing:.08em; text-transform:uppercase; font-family:system-ui, sans-serif; }
@@ -43,16 +51,23 @@
   .toolbar .hint{ color:var(--fog); opacity:.8; }
 
   #wrap{ padding:26px 5vw 100px; }
-  #stage{
-    position:relative;
+  #stageZoomWrap{
     max-width:1500px;
     margin:0 auto;
-    line-height:0;
-    touch-action:none;
     transform-origin:50% 50%;
   }
-  #stage img{ width:100%; display:block; border-radius:6px; box-shadow:0 30px 90px rgba(0,0,0,.55);
+  #stage{
+    position:relative;
+    line-height:0;
+    touch-action:none;
+  }
+  #stage img{ width:100%; display:block;
     -webkit-user-drag:none; user-drag:none; -webkit-user-select:none; user-select:none; touch-action:none; }
+
+  #bottomImg{
+    display:block; width:100%; padding:0; border:0;
+    -webkit-user-drag:none; user-drag:none; -webkit-user-select:none; user-select:none;
+  }
 
   #zoomIndicator{
     position:absolute; top:10px; right:10px; z-index:20;
@@ -68,6 +83,10 @@
   #linkOverlay .hover-line-dyn{ opacity:0.9; }
   #linkOverlay line.hover-line-dyn{ stroke:#d43a2f; }
   #linkOverlay circle.hover-line-dyn{ fill:#d43a2f; r:0.5; }
+
+  #fightLinesLayer{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:7; }
+  .fight-line{ stroke:rgba(79,143,130,.75); stroke-width:0.12; opacity:.8; pointer-events:auto; cursor:default; }
+  .fight-line:hover{ stroke:#6fc9b8; stroke-width:0.24; opacity:1; }
 
   .hotspot{
     position:absolute;
@@ -176,9 +195,10 @@
     font-family:system-ui, sans-serif; font-size:12.5px; color:var(--parchment);
     background:rgba(192,138,62,.16); border:1px solid var(--brass);
     padding:7px 14px; border-radius:7px; cursor:pointer;
+    text-shadow:0 1px 3px rgba(0,0,0,.85);
   }
   .toolbar button:hover{ background:rgba(192,138,62,.32); }
-  .toolbar button.primary{ background:var(--brass); color:var(--ink); font-weight:600; }
+  .toolbar button.primary{ background:var(--brass); color:var(--ink); font-weight:600; text-shadow:none; }
   .toolbar button.primary:hover{ background:#d69a4c; }
   .toolbar button.danger{ border-color:var(--rust); }
   .toolbar button.danger:hover{ background:rgba(168,75,50,.3); }
@@ -412,12 +432,6 @@
 <body>
 
 <header>
-  <div class="sub">US-E / Driss server history</div>
-  <h1 class="display">Worlds Adrift <span>Timeline</span></h1>
-  <p class="note">
-    All changes are saved <b>LOCALLY</b>. To have a change be reflected permanently, please download the json
-    and share with <b>@abts</b> on discord.
-  </p>
   <button type="button" class="ef-toggle subtle" id="toolbarToggle" aria-label="Chart editing tools" title="Chart editing tools">
     <span class="caret">▶</span>
   </button>
@@ -447,10 +461,14 @@
 </header>
 
 <div id="wrap">
-  <div id="stage">
-    <img id="chartImg" src="WATimeline.png" alt="Worlds Adrift Timeline chart" draggable="false" ondragstart="return false;">
-    <svg id="linkOverlay" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
-    <div id="zoomIndicator" title="Click to reset zoom"><span id="zoomIndicatorPct">100%</span><span class="zoom-reset">· reset</span></div>
+  <div id="stageZoomWrap">
+    <div id="stage">
+      <img id="chartImg" src="WATimeline.png" alt="Worlds Adrift Timeline chart" draggable="false" ondragstart="return false;">
+      <svg id="linkOverlay" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+      <svg id="fightLinesLayer" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+      <div id="zoomIndicator" title="Click to reset zoom"><span id="zoomIndicatorPct">100%</span><span class="zoom-reset">· reset</span></div>
+    </div>
+    <img id="bottomImg" src="bottom.png" alt="" draggable="false" ondragstart="return false;">
   </div>
 </div>
 
@@ -543,6 +561,7 @@
     Another crew's POV of a fight already counted elsewhere — keep the video, but leave it out of the fight-record chart
   </label>
   <datalist id="opponentOptions"></datalist>
+  <datalist id="combineOptions"></datalist>
   <div id="efMediaList"></div>
 
   <label>Screenshots</label>
@@ -559,6 +578,13 @@
     <button id="efLinkAdd">Link</button>
   </div>
   <div id="efLinkList"></div>
+
+  <label>Combine with another hotspot</label>
+  <div class="add-media-row">
+    <input type="text" id="efCombineInput" class="opponent-search" list="combineOptions" placeholder="🔍 Search a crew to merge into…" autocomplete="off">
+    <button id="efCombineBtn">Combine</button>
+  </div>
+  <div class="hint-line">Merges this box's videos, screenshots, description, members, and links into the crew you pick, redirects any fight tags pointing at this box, then deletes this box. Can't be undone.</div>
 
   <label>Wipe boundaries</label>
   <button class="fileBtn" id="efSplitBtn" style="width:100%;">✂ Split at wipe lines</button>
@@ -610,7 +636,6 @@ const HOTSPOTS = [
   {id:"p4g", name:"Poo Poo Pee Gang (P4G)", era:"Wipe 9", desc:"", members:"", link:"", x:39.1, y:8.78, w:1.5, h:5.11, videos:[], images:[], links:["bork_vela_security","bork_vela_security_wipe_7_9be","new_25gq31"]},
   {id:"catalina", name:"Catalina Wine Mixer", era:"Wipe 9", desc:"", members:"", link:"", x:44.37, y:9.08, w:1.5, h:2.81, videos:[], images:[], links:[]},
   {id:"palvi", name:"Pahri", era:"Wipe 8", desc:"", members:"", link:"", x:58.75, y:14.35, w:2, h:2.6, videos:[], images:[], links:[]},
-  {id:"unknown_w8", name:"Unknown", era:"Wipe 8", desc:"", members:"", link:"", x:44.2, y:18.77, w:8, h:1.5, videos:[], images:[], links:[]},
   {id:"fake_taxi", name:"Fake Taxi", era:"Wipe 8", desc:"", members:"", link:"", x:57.83, y:13.34, w:1.5, h:8.55, videos:[{"type":"youtube","embedId":"04BqFVzBMWo","url":"https://youtu.be/04BqFVzBMWo?si=1se3KiD4uJAoLHcB","title":"fake taxi + green pearl vs bl","outcome":"","thumb":"https://img.youtube.com/vi/04BqFVzBMWo/hqdefault.jpg","opponentId":"bl_inc_w9_wipe_8_dah","altPerspective":true,"date":"02/12/2019"},{"type":"youtube","embedId":"82fmWJv4k2s","url":"https://www.youtube.com/watch?v=82fmWJv4k2s","title":"fight with bl inc","outcome":"Clear Defeat","thumb":"https://img.youtube.com/vi/82fmWJv4k2s/hqdefault.jpg","opponentId":"bl_inc_w9_wipe_8_dah","altPerspective":true,"date":"02/07/2019"}], images:[], links:[]},
   {id:"unity", name:"Unity", era:"Wipe 8", desc:"", members:"", link:"", x:58.97, y:27.56, w:1.5, h:1.5, videos:[], images:[], links:[]},
   {id:"mothership", name:"Mothership/FREEDOM", era:"Wipe 8", desc:"", members:"", link:"", x:64.54, y:12.52, w:1.5, h:7.9, videos:[], images:[], links:["new_hbrvps","new_hbrvps_wipe_6_7h9","new_hbrvps_wipe_5_qoz","new_hbrvps_wipe_4_swq","new_hbrvps_wipe_3_gb4","new_klw2hz"]},
@@ -680,12 +705,12 @@ const HOTSPOTS = [
   {id:"patch_alpha_3", name:"Alpha 3", era:"Patch", desc:"2016-02-25 — Shipyard Ownership System", members:"", link:"https://worldsadrift.fandom.com/wiki/Alpha_3", x:85, y:89.61, w:15, h:2.62, videos:[], images:[], links:[]},
   {id:"patch_alpha_2", name:"Alpha 2", era:"Patch", desc:"2015-12-15 — Basic Creatures Added", members:"", link:"https://worldsadrift.fandom.com/wiki/Alpha_2", x:85, y:92.55, w:15, h:4.29, videos:[], images:[], links:[]},
   {id:"patch_alpha_1", name:"Alpha 1", era:"Patch", desc:"2015-11-19 — First Public Build", members:"", link:"https://worldsadrift.fandom.com/wiki/Alpha_1", x:85, y:97.03, w:15, h:2.97, videos:[], images:[], links:[]},
-  {id:"new_phpkpp", name:"Unknown", era:"Wipe 8", desc:"", members:"", link:"", x:44.2, y:15.92, w:3.47, h:0.68, videos:[{"type":"youtube","embedId":"o2lPB-A5XpQ","url":"https://www.youtube.com/watch?v=o2lPB-A5XpQ","title":"Unknown feat. BL inc vc Ali and boys","outcome":"Sunk","thumb":"https://img.youtube.com/vi/o2lPB-A5XpQ/hqdefault.jpg","opponentId":"aliiloas_crew_wipe_8_gkf","altPerspective":false,"date":"03/01/2019"},{"type":"youtube","embedId":"WqzHJtAe9BU","url":"https://www.youtube.com/watch?v=WqzHJtAe9BU","title":"Unknown/BL inc Vc Green pearl/Dejavu/Fake Taxi","outcome":"Tie","thumb":"https://img.youtube.com/vi/WqzHJtAe9BU/hqdefault.jpg","opponentId":"green_pearl_wipe_8_3v1","altPerspective":false,"date":"02/18/2019"}], images:[], links:[]},
+  {id:"new_phpkpp", name:"Unknown", era:"Wipe 8", desc:"", members:"", link:"", x:41.97, y:18.53, w:17.62, h:1.63, videos:[{"type":"youtube","embedId":"o2lPB-A5XpQ","url":"https://www.youtube.com/watch?v=o2lPB-A5XpQ","title":"Unknown feat. BL inc vc Ali and boys","outcome":"Sunk","thumb":"https://img.youtube.com/vi/o2lPB-A5XpQ/hqdefault.jpg","opponentId":"aliiloas_crew_wipe_8_gkf","altPerspective":false,"date":"03/01/2019"},{"type":"youtube","embedId":"WqzHJtAe9BU","url":"https://www.youtube.com/watch?v=WqzHJtAe9BU","title":"Unknown/BL inc Vc Green pearl/Dejavu/Fake Taxi","outcome":"Tie","thumb":"https://img.youtube.com/vi/WqzHJtAe9BU/hqdefault.jpg","opponentId":"green_pearl_wipe_8_3v1","altPerspective":false,"date":"02/18/2019"}], images:[], links:[]},
   {id:"new_renpc4", name:"Sterdekie", era:"Wipe 7", desc:"", members:"", link:"", x:68, y:32.39, w:1.53, h:3.16, videos:[], images:[], links:[]},
   {id:"new_klw2hz", name:"Mothership", era:"Wipe 3", desc:"", members:"", link:"", x:64.67, y:51.09, w:1.4, h:2.89, videos:[], images:[], links:["new_hbrvps","new_hbrvps_wipe_6_7h9","new_hbrvps_wipe_5_qoz","new_hbrvps_wipe_4_swq","new_hbrvps_wipe_3_gb4","mothership"]},
   {id:"new_2vmr3t", name:"Freeport Bank Grief", era:"Wipe 3", desc:"", members:"", link:"", x:74.6, y:55.89, w:6.6, h:1.63, videos:[], images:[], links:[]},
   {id:"new_du92qg", name:"Golden Sparrows", era:"Wipe 3", desc:"", members:"", link:"", x:54.37, y:59.78, w:1.76, h:1.9, videos:[], images:[], links:[]},
-  {id:"new_25gq31", name:"The Bork", era:"Wipe 8", desc:"After Vela, the Bork became more self confident, and shedded off many members. Arguably the bork at their peak. ", members:"Biglet\nGitlit\nThe_Gipsy_Danger\nNoname\nBastion\nXrellik", link:"", x:38.92, y:24.03, w:2.17, h:4.42, videos:[{"type":"youtube","embedId":"URoG-2ngRtI","url":"https://www.youtube.com/watch?v=URoG-2ngRtI","title":"Unlisted","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/URoG-2ngRtI/hqdefault.jpg","opponentId":"crimson_federation","altPerspective":false,"date":"11/10/2018"},{"type":"youtube","embedId":"sQuCtIkAXns","url":"https://www.youtube.com/watch?v=sQuCtIkAXns","title":"Bork vs Zatios / 3 Iron Cannons vs Full Alum - Worlds Adrift","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/sQuCtIkAXns/hqdefault.jpg","opponentId":"new_23rmim","altPerspective":false,"date":"11/07/2018"},{"type":"youtube","embedId":"QskU3TioIK4","url":"https://www.youtube.com/watch?v=QskU3TioIK4","title":"Bork vs Green Pearl - Worlds Adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/QskU3TioIK4/hqdefault.jpg","opponentId":"green_pearl_wipe_8_3v1","altPerspective":false,"date":"11/12/2018"},{"type":"youtube","embedId":"X8njQVVJ480","url":"https://www.youtube.com/watch?v=X8njQVVJ480","title":"Bork vs Dirty Pirates - Worlds Adrift","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/X8njQVVJ480/hqdefault.jpg","opponentId":"new_ti1zk5_wipe_8_jf7","altPerspective":false,"date":"11/12/2018"},{"type":"youtube","embedId":"Y7Uvo4sD3GE","url":"https://www.youtube.com/watch?v=Y7Uvo4sD3GE","title":"Bork vs Beaver Dam - Worlds Adrift","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/Y7Uvo4sD3GE/hqdefault.jpg","opponentId":"beaver_dam_wipe_8_b66_wipe_8_5tf","altPerspective":false,"date":"11/18/2018"},{"type":"youtube","embedId":"DyxKUd2q338","url":"https://www.youtube.com/watch?v=DyxKUd2q338","title":"Pirating the Dirty Pirates - Worlds Adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/DyxKUd2q338/hqdefault.jpg","opponentId":"new_ti1zk5_wipe_8_jf7","altPerspective":false,"date":"11/18/2018"},{"type":"youtube","embedId":"Dm2Uu4Iulwc","url":"https://www.youtube.com/watch?v=Dm2Uu4Iulwc","title":"Bork Griefing Aliiloa","outcome":"Sunk","thumb":"https://img.youtube.com/vi/Dm2Uu4Iulwc/hqdefault.jpg","opponentId":"aliiloas_crew_wipe_8_gkf","altPerspective":false,"date":"11/22/2018"},{"type":"youtube","embedId":"GLABNwJoGuU","url":"https://www.youtube.com/watch?v=GLABNwJoGuU","title":"Bork vs Aluminati - Worlds Adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/GLABNwJoGuU/hqdefault.jpg","opponentId":"aluminati","altPerspective":false,"date":"11/26/2018"},{"type":"youtube","embedId":"Et6IUHmCRbo","url":"https://www.youtube.com/watch?v=Et6IUHmCRbo","title":"T2 Bork Ship vs T2 Casually Addicted Ship - Worlds Adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/Et6IUHmCRbo/hqdefault.jpg","opponentId":"casually_addicted","altPerspective":false,"date":"11/30/2018"},{"type":"youtube","embedId":"glsSlVWvnD8","url":"https://www.youtube.com/watch?v=glsSlVWvnD8","title":"Bork vs Casually Addicted - Worlds Adrift","outcome":"Clear Defeat","thumb":"https://img.youtube.com/vi/glsSlVWvnD8/hqdefault.jpg","opponentId":"casually_addicted","altPerspective":false,"date":"12/01/2018"},{"type":"youtube","embedId":"VvBe7Gai7H8","url":"https://www.youtube.com/watch?v=VvBe7Gai7H8","title":"Bork vs Aluminati / Speed Run Until They Run (5 MIN!) - Worlds Adrift","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/VvBe7Gai7H8/hqdefault.jpg","opponentId":"aluminati","altPerspective":false,"date":"12/01/2018"},{"type":"youtube","embedId":"reO1Dh2hjl8","url":"https://www.youtube.com/watch?v=reO1Dh2hjl8","title":"Bork vs Krob / Advantage of Being Above - Worlds Adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/reO1Dh2hjl8/hqdefault.jpg","opponentId":"krob","altPerspective":false,"date":"12/10/2018"},{"type":"youtube","embedId":"815kVT2q3Lo","url":"https://www.youtube.com/watch?v=815kVT2q3Lo","title":"Bork vs Unity (FINALLY!) - Worlds Adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/815kVT2q3Lo/hqdefault.jpg","opponentId":"new_cktc19","altPerspective":false,"date":"12/16/2018"}], images:[], links:["bork_vela_security","bork_vela_security_wipe_7_9be","p4g"]},
+  {id:"new_25gq31", name:"The Bork", era:"Wipe 8", desc:"After Vela, the Bork became more self confident, and shedded off many members. Arguably the bork at their peak. ", members:"Biglet\nGitlit\nThe_Gipsy_Danger\nNoname\nBastion\nXrellik", link:"", x:38.92, y:24.03, w:2.17, h:4.42, videos:[{"type":"youtube","embedId":"URoG-2ngRtI","url":"https://www.youtube.com/watch?v=URoG-2ngRtI","title":"Unlisted","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/URoG-2ngRtI/hqdefault.jpg","opponentId":"crimson_federation","altPerspective":false,"date":"11/10/2018"},{"type":"youtube","embedId":"sQuCtIkAXns","url":"https://www.youtube.com/watch?v=sQuCtIkAXns","title":"Bork vs Zatios / 3 Iron Cannons vs Full Alum - Worlds Adrift","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/sQuCtIkAXns/hqdefault.jpg","opponentId":"new_23rmim","altPerspective":false,"date":"11/07/2018"},{"type":"youtube","embedId":"QskU3TioIK4","url":"https://www.youtube.com/watch?v=QskU3TioIK4","title":"Bork vs Green Pearl - Worlds Adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/QskU3TioIK4/hqdefault.jpg","opponentId":"green_pearl_wipe_8_3v1","altPerspective":false,"date":"11/12/2018"},{"type":"youtube","embedId":"X8njQVVJ480","url":"https://www.youtube.com/watch?v=X8njQVVJ480","title":"Bork vs Dirty Pirates - Worlds Adrift","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/X8njQVVJ480/hqdefault.jpg","opponentId":"new_ti1zk5_wipe_8_jf7","altPerspective":false,"date":"11/12/2018"},{"type":"youtube","embedId":"Y7Uvo4sD3GE","url":"https://www.youtube.com/watch?v=Y7Uvo4sD3GE","title":"Bork vs Beaver Dam - Worlds Adrift","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/Y7Uvo4sD3GE/hqdefault.jpg","opponentId":"beaver_dam_wipe_8_b66","altPerspective":false,"date":"11/18/2018"},{"type":"youtube","embedId":"DyxKUd2q338","url":"https://www.youtube.com/watch?v=DyxKUd2q338","title":"Pirating the Dirty Pirates - Worlds Adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/DyxKUd2q338/hqdefault.jpg","opponentId":"new_ti1zk5_wipe_8_jf7","altPerspective":false,"date":"11/18/2018"},{"type":"youtube","embedId":"Dm2Uu4Iulwc","url":"https://www.youtube.com/watch?v=Dm2Uu4Iulwc","title":"Bork Griefing Aliiloa","outcome":"Sunk","thumb":"https://img.youtube.com/vi/Dm2Uu4Iulwc/hqdefault.jpg","opponentId":"aliiloas_crew_wipe_8_gkf","altPerspective":false,"date":"11/22/2018"},{"type":"youtube","embedId":"GLABNwJoGuU","url":"https://www.youtube.com/watch?v=GLABNwJoGuU","title":"Bork vs Aluminati - Worlds Adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/GLABNwJoGuU/hqdefault.jpg","opponentId":"aluminati","altPerspective":false,"date":"11/26/2018"},{"type":"youtube","embedId":"Et6IUHmCRbo","url":"https://www.youtube.com/watch?v=Et6IUHmCRbo","title":"T2 Bork Ship vs T2 Casually Addicted Ship - Worlds Adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/Et6IUHmCRbo/hqdefault.jpg","opponentId":"casually_addicted","altPerspective":false,"date":"11/30/2018"},{"type":"youtube","embedId":"glsSlVWvnD8","url":"https://www.youtube.com/watch?v=glsSlVWvnD8","title":"Bork vs Casually Addicted - Worlds Adrift","outcome":"Clear Defeat","thumb":"https://img.youtube.com/vi/glsSlVWvnD8/hqdefault.jpg","opponentId":"casually_addicted","altPerspective":false,"date":"12/01/2018"},{"type":"youtube","embedId":"VvBe7Gai7H8","url":"https://www.youtube.com/watch?v=VvBe7Gai7H8","title":"Bork vs Aluminati / Speed Run Until They Run (5 MIN!) - Worlds Adrift","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/VvBe7Gai7H8/hqdefault.jpg","opponentId":"aluminati","altPerspective":false,"date":"12/01/2018"},{"type":"youtube","embedId":"reO1Dh2hjl8","url":"https://www.youtube.com/watch?v=reO1Dh2hjl8","title":"Bork vs Krob / Advantage of Being Above - Worlds Adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/reO1Dh2hjl8/hqdefault.jpg","opponentId":"krob","altPerspective":false,"date":"12/10/2018"},{"type":"youtube","embedId":"815kVT2q3Lo","url":"https://www.youtube.com/watch?v=815kVT2q3Lo","title":"Bork vs Unity (FINALLY!) - Worlds Adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/815kVT2q3Lo/hqdefault.jpg","opponentId":"new_cktc19","altPerspective":false,"date":"12/16/2018"}], images:[], links:["bork_vela_security","bork_vela_security_wipe_7_9be","p4g"]},
   {id:"new_hwjhwl", name:"The Beaver Dam", era:"Wipe 3", desc:"", members:"", link:"", x:70.08, y:50.13, w:1.67, h:7.57, videos:[], images:[], links:[]},
   {id:"new_326w33", name:"Bastion Joins BL", era:"Wipe 8", desc:"", members:"", link:"", x:39.08, y:22.37, w:3.58, h:1.49, videos:[], images:[], links:[]},
   {id:"new_m7qkn0", name:"Mutton & Others join to fight borg", era:"Wipe 6", desc:"", members:"", link:"", x:41.69, y:41.02, w:21.92, h:0.77, videos:[], images:[], links:[]},
@@ -705,7 +730,7 @@ const HOTSPOTS = [
   {id:"vexus_w9", name:"Vexus", era:"Wipe 9", desc:"", members:"", link:"", x:27.23, y:11.52, w:11.6, h:0.97, videos:[], images:[], links:["vexus_w3","vexus_w3_wipe_6_qt6","vexus_w3_wipe_5_bb6","vexus_w3_wipe_4_59w","vexus_w3_wipe_3_ivz","vexus_w9_wipe_8_fgp"]},
   {id:"vexus_w9_wipe_8_fgp", name:"Vexus", era:"Wipe 8", desc:"", members:"", link:"", x:27.23, y:12.49, w:11.6, h:0.71, videos:[], images:[], links:["vexus_w3","vexus_w3_wipe_6_qt6","vexus_w3_wipe_5_bb6","vexus_w3_wipe_4_59w","vexus_w3_wipe_3_ivz","vexus_w9"]},
   {id:"bl_inc_w9", name:"BL Inc", era:"Wipe 9", desc:"", members:"", link:"", x:42.57, y:9.64, w:1.5, h:2.85, videos:[], images:[], links:["bl_inc_w9_wipe_8_dah"]},
-  {id:"bl_inc_w9_wipe_8_dah", name:"BL Inc", era:"Wipe 8", desc:"", members:"", link:"", x:42.57, y:12.46, w:1.5, h:11.41, videos:[{"type":"youtube","embedId":"3gN_JXCndXo","url":"https://youtu.be/3gN_JXCndXo","title":"BL Inc. vs. The Green Pearl","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/3gN_JXCndXo/hqdefault.jpg","opponentId":"green_pearl_wipe_8_3v1","altPerspective":false,"date":"03/17/2019"},{"type":"youtube","embedId":"GHgT2hyl1JI","url":"https://youtu.be/GHgT2hyl1JI","title":"BL Inc  vs  BORG","outcome":"Sunk","thumb":"https://img.youtube.com/vi/GHgT2hyl1JI/hqdefault.jpg","opponentId":"borg_w6_wipe_8_n00","altPerspective":false,"date":"03/17/2019"},{"type":"youtube","embedId":"RVHR4vdOIyA","url":"https://youtu.be/RVHR4vdOIyA","title":"BL Inc and Unknown vs Deja Vu","outcome":"Sunk","thumb":"https://img.youtube.com/vi/RVHR4vdOIyA/hqdefault.jpg","opponentId":"deja_vu_wipe_8_3z2","altPerspective":false,"date":"03/20/2019"},{"type":"youtube","embedId":"4AkVFsLfkKY","url":"https://youtu.be/4AkVFsLfkKY","title":"BL Inc  vs The Lore Keepers","outcome":"Sunk","thumb":"https://img.youtube.com/vi/4AkVFsLfkKY/hqdefault.jpg","opponentId":"","altPerspective":false,"date":"03/22/2019"},{"type":"youtube","embedId":"VcR6qSh-Flo","url":"https://youtu.be/VcR6qSh-Flo","title":"BL Inc vs BORG","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/VcR6qSh-Flo/hqdefault.jpg","opponentId":"borg_w6_wipe_8_n00","altPerspective":false,"date":"03/23/2019"},{"type":"youtube","embedId":"i9vS3D5xi88","url":"https://youtu.be/i9vS3D5xi88","title":"BL Inc vs Booty Looters","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/i9vS3D5xi88/hqdefault.jpg","opponentId":"fake_taxi","altPerspective":false,"date":"03/25/2019"},{"type":"youtube","embedId":"Ba3-5U7JMsw","url":"https://youtu.be/Ba3-5U7JMsw","title":"GP saving HM whale","outcome":"","thumb":"https://img.youtube.com/vi/Ba3-5U7JMsw/hqdefault.jpg","opponentId":"","altPerspective":false,"date":"05/22/2019"},{"type":"youtube","embedId":"S-BnvcYkaQ0","url":"https://youtu.be/S-BnvcYkaQ0","title":"BL inc  vs Unknown","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/S-BnvcYkaQ0/hqdefault.jpg","opponentId":"new_phpkpp","altPerspective":false,"date":"11/17/2019"},{"type":"youtube","embedId":"yfncE-5Rp-8","url":"https://youtu.be/yfncE-5Rp-8","title":"PTS Fights featuring OMB","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/yfncE-5Rp-8/hqdefault.jpg","opponentId":"","altPerspective":false,"date":"06/08/2019"},{"type":"youtube","embedId":"Lus18s3Ahb4","url":"https://www.youtube.com/watch?v=Lus18s3Ahb4&t=5s","title":"BL Inc + Bastion vs Misfit Fleet - Worlds Adrift PvP","outcome":"Sunk","thumb":"https://img.youtube.com/vi/Lus18s3Ahb4/hqdefault.jpg","opponentId":"new_97ihh6_wipe_8_axl","altPerspective":false,"date":"01/26/2019"},{"type":"youtube","embedId":"EXYU2wDONfU","url":"https://www.youtube.com/watch?v=EXYU2wDONfU","title":"BL Inc + Bastion vs Unity - Worlds Adrift PvP","outcome":"Tie","thumb":"https://img.youtube.com/vi/EXYU2wDONfU/hqdefault.jpg","opponentId":"fake_taxi","altPerspective":false,"date":"01/27/2019"},{"type":"youtube","embedId":"pwJ4BDTVCiY","url":"https://www.youtube.com/watch?v=pwJ4BDTVCiY&t=4s","title":"BL Inc vs Definitely Unity - Worlds Adrift PvP","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/pwJ4BDTVCiY/hqdefault.jpg","opponentId":"fake_taxi","altPerspective":false,"date":"01/27/2019"},{"type":"youtube","embedId":"a_EFwMLwJEk","url":"https://www.youtube.com/watch?v=a_EFwMLwJEk","title":"BL Inc vs OMB + Ziwix - Worlds Adrift PvP","outcome":"Sunk","thumb":"https://img.youtube.com/vi/a_EFwMLwJEk/hqdefault.jpg","opponentId":"aliiloas_crew_wipe_8_gkf","altPerspective":false,"date":"02/01/2019"},{"type":"youtube","embedId":"0AW1Xm1i35k","url":"https://www.youtube.com/watch?v=0AW1Xm1i35k","title":"Deletion Bug vs Dirty Pirates - Worlds Adrift \"PvP\"","outcome":"Sunk","thumb":"https://img.youtube.com/vi/0AW1Xm1i35k/hqdefault.jpg","opponentId":"new_ti1zk5_wipe_8_jf7","altPerspective":false,"date":"02/02/2019"},{"type":"youtube","embedId":"C0XvQHGZHP4","url":"https://www.youtube.com/watch?v=C0XvQHGZHP4&t=2s","title":"BL Inc vs Unity - Worlds Adrift PvP","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/C0XvQHGZHP4/hqdefault.jpg","opponentId":"fake_taxi","altPerspective":false,"date":"02/07/2019"},{"type":"youtube","embedId":"uoUkikdK9BA","url":"https://www.youtube.com/watch?v=uoUkikdK9BA","title":"BL Inc vs Deja Vu - Worlds Adrift PvP","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/uoUkikdK9BA/hqdefault.jpg","opponentId":"deja_vu_wipe_8_3z2","altPerspective":false,"date":"02/09/2019"},{"type":"youtube","embedId":"jdtvTuRa1G8","url":"https://youtu.be/jdtvTuRa1G8?si=5C3b7oP4NMS1bPyF","title":"BL Inc vs Every Top 'Crew' / 9 v 15 Fight Night - Worlds Adrift PvP","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/jdtvTuRa1G8/hqdefault.jpg","opponentId":"join_or_die","altPerspective":false,"date":"02/17/2019"},{"type":"youtube","embedId":"E2RNWeMG2U4","url":"https://www.youtube.com/watch?v=E2RNWeMG2U4","title":"BL Inc vs GSA + Gold Fish / 9 vs '30' - Worlds Adrift PvP","outcome":"Sunk","thumb":"https://img.youtube.com/vi/E2RNWeMG2U4/hqdefault.jpg","opponentId":"","altPerspective":false,"date":"02/27/2019"},{"type":"youtube","embedId":"h6ZgDR--LXg","url":"https://www.youtube.com/watch?v=h6ZgDR--LXg","title":"BL Inc Flagship vs Green Pearl - Worlds Adrift PvP","outcome":"Partial Defeat","thumb":"https://img.youtube.com/vi/h6ZgDR--LXg/hqdefault.jpg","opponentId":"green_pearl_wipe_8_3v1","altPerspective":false,"date":"03/13/2019"},{"type":"youtube","embedId":"7R9BqkqZyHM","url":"https://www.youtube.com/watch?v=7R9BqkqZyHM","title":"Borg Fight 5","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/7R9BqkqZyHM/hqdefault.jpg","opponentId":"borg_w6_wipe_8_n00","altPerspective":false,"date":"03/15/2019"},{"type":"youtube","embedId":"uR6ahpW0mx8","url":"https://www.youtube.com/watch?v=uR6ahpW0mx8&t=3s","title":"borg fight 6","outcome":"Clear Defeat","thumb":"https://img.youtube.com/vi/uR6ahpW0mx8/hqdefault.jpg","opponentId":"borg_w6_wipe_8_n00","altPerspective":false,"date":"03/21/2019"},{"type":"youtube","embedId":"enqumdg8cRE","url":"https://www.youtube.com/watch?v=enqumdg8cRE","title":"borg fight 7","outcome":"Clear Defeat","thumb":"https://img.youtube.com/vi/enqumdg8cRE/hqdefault.jpg","opponentId":"borg_w6_wipe_8_n00","altPerspective":false,"date":"04/03/2019"},{"type":"youtube","embedId":"3EV0J4hyj1U","url":"https://www.youtube.com/watch?v=3EV0J4hyj1U&t=6s","title":"Something vs BL - Worlds Adrift PvP","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/3EV0J4hyj1U/hqdefault.jpg","opponentId":"something_badass_wipe_8_a59","altPerspective":false,"date":"06/13/2019"},{"type":"youtube","embedId":"OGV_33sx1BE","url":"https://www.youtube.com/watch?v=OGV_33sx1BE","title":"fight","outcome":"Clear Defeat","thumb":"https://img.youtube.com/vi/OGV_33sx1BE/hqdefault.jpg","opponentId":"something_badass_wipe_8_a59","altPerspective":false,"date":"03/29/2019"},{"type":"youtube","embedId":"VPIm5mVHCKE","url":"https://www.youtube.com/watch?v=VPIm5mVHCKE","title":"epic fight","outcome":"Clear Defeat","thumb":"https://img.youtube.com/vi/VPIm5mVHCKE/hqdefault.jpg","opponentId":"borg_w6_wipe_8_n00","altPerspective":false,"date":"03/10/2019"},{"type":"youtube","embedId":"nGpuW6B5-Pg","url":"https://www.youtube.com/watch?v=nGpuW6B5-Pg","title":"lag op","outcome":"Clear Defeat","thumb":"https://img.youtube.com/vi/nGpuW6B5-Pg/hqdefault.jpg","opponentId":"deja_vu_wipe_8_3z2","altPerspective":false,"date":"03/03/2019"},{"type":"youtube","embedId":"JyuRSfb8OOQ","url":"https://www.youtube.com/watch?v=JyuRSfb8OOQ","title":"2019 02 06 15 49 46","outcome":"Got Sunk","thumb":"https://img.youtube.com/vi/JyuRSfb8OOQ/hqdefault.jpg","opponentId":"green_pearl_wipe_8_3v1","altPerspective":false,"date":"02/07/2019"},{"type":"youtube","embedId":"ER6lmb9nzvs","url":"https://www.youtube.com/watch?v=ER6lmb9nzvs","title":"2019 02 05 15 42 59","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/ER6lmb9nzvs/hqdefault.jpg","opponentId":"green_pearl_wipe_8_3v1","altPerspective":false,"date":"02/06/2019"},{"type":"youtube","embedId":"ER6lmb9nzvs","url":"https://www.youtube.com/watch?v=ER6lmb9nzvs","title":"2019 02 05 15 42 59","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/ER6lmb9nzvs/hqdefault.jpg","opponentId":"deja_vu_wipe_8_3z2","altPerspective":false,"date":"02/06/2019"},{"type":"youtube","embedId":"PmNs8LPKSj0","url":"https://www.youtube.com/watch?v=PmNs8LPKSj0","title":"2019 02 05 20 37 54","outcome":"Sunk","thumb":"https://img.youtube.com/vi/PmNs8LPKSj0/hqdefault.jpg","opponentId":"","altPerspective":false,"date":"02/06/2019"},{"type":"youtube","embedId":"L9PVo9LHMEs","url":"https://www.youtube.com/watch?v=L9PVo9LHMEs","title":"BL Inc vs Beaver Solo","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/L9PVo9LHMEs/hqdefault.jpg","opponentId":"beaver_dam_wipe_8_b66_wipe_8_5tf","altPerspective":false,"date":"02/02/2019"},{"type":"youtube","embedId":"PO4r-WKp9fQ","url":"https://www.youtube.com/watch?v=PO4r-WKp9fQ","title":"Bork Left Inc vs Join Or Die - Worlds Adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/PO4r-WKp9fQ/hqdefault.jpg","opponentId":"join_or_die","altPerspective":false,"date":"01/25/2019"},{"type":"youtube","embedId":"XYOT0pQQ4VA","url":"https://www.youtube.com/watch?v=XYOT0pQQ4VA","title":"Desktop 2018 11 09   22 55 34 03","outcome":"Partial Defeat","thumb":"https://img.youtube.com/vi/XYOT0pQQ4VA/hqdefault.jpg","opponentId":"new_25gq31","altPerspective":true,"date":"11/10/2018"},{"type":"youtube","embedId":"yIPaCvqF6hs","url":"https://www.youtube.com/watch?v=yIPaCvqF6hs","title":"BL.Inc vs Fake Taxi aka Unity","outcome":"Sunk","thumb":"https://img.youtube.com/vi/yIPaCvqF6hs/hqdefault.jpg","opponentId":"fake_taxi","altPerspective":false,"date":"01/11/2019"},{"type":"youtube","embedId":"OIHfMcCBa4A","url":"https://youtu.be/OIHfMcCBa4A?si=tBXCoeT2xpl33yDx","title":"We found a small stash","outcome":"","thumb":"https://img.youtube.com/vi/OIHfMcCBa4A/hqdefault.jpg","opponentId":"natives_w7","altPerspective":false,"date":"03/26/2019"},{"type":"youtube","embedId":"E2RNWeMG2U4","url":"https://www.youtube.com/watch?v=E2RNWeMG2U4","title":"BL Inc vs GSA + Gold Fish / 9 vs '30' - Worlds Adrift PvP","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/E2RNWeMG2U4/hqdefault.jpg","opponentId":"new_1a7213","altPerspective":false},{"type":"youtube","embedId":"E2RNWeMG2U4","url":"https://www.youtube.com/watch?v=E2RNWeMG2U4","title":"BL Inc vs GSA + Gold Fish / 9 vs '30' - Worlds Adrift PvP","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/E2RNWeMG2U4/hqdefault.jpg","opponentId":"new_wgrecj","altPerspective":true},{"type":"youtube","embedId":"WnYvDe80X-4","url":"https://www.youtube.com/watch?v=WnYvDe80X-4","title":"BL inc vs GSA (Glorious Sky Armada) Worlds Adrift pvp","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/WnYvDe80X-4/hqdefault.jpg","opponentId":"new_1a7213","altPerspective":true}], images:[], links:["bl_inc_w9"]},
+  {id:"bl_inc_w9_wipe_8_dah", name:"BL Inc", era:"Wipe 8", desc:"", members:"", link:"", x:42.57, y:12.46, w:1.5, h:11.41, videos:[{"type":"youtube","embedId":"3gN_JXCndXo","url":"https://youtu.be/3gN_JXCndXo","title":"BL Inc. vs. The Green Pearl","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/3gN_JXCndXo/hqdefault.jpg","opponentId":"green_pearl_wipe_8_3v1","altPerspective":false,"date":"03/17/2019"},{"type":"youtube","embedId":"GHgT2hyl1JI","url":"https://youtu.be/GHgT2hyl1JI","title":"BL Inc  vs  BORG","outcome":"Sunk","thumb":"https://img.youtube.com/vi/GHgT2hyl1JI/hqdefault.jpg","opponentId":"borg_w6_wipe_8_n00","altPerspective":false,"date":"03/17/2019"},{"type":"youtube","embedId":"RVHR4vdOIyA","url":"https://youtu.be/RVHR4vdOIyA","title":"BL Inc and Unknown vs Deja Vu","outcome":"Sunk","thumb":"https://img.youtube.com/vi/RVHR4vdOIyA/hqdefault.jpg","opponentId":"deja_vu_wipe_8_3z2","altPerspective":false,"date":"03/20/2019"},{"type":"youtube","embedId":"4AkVFsLfkKY","url":"https://youtu.be/4AkVFsLfkKY","title":"BL Inc  vs The Lore Keepers","outcome":"Sunk","thumb":"https://img.youtube.com/vi/4AkVFsLfkKY/hqdefault.jpg","opponentId":"","altPerspective":false,"date":"03/22/2019"},{"type":"youtube","embedId":"VcR6qSh-Flo","url":"https://youtu.be/VcR6qSh-Flo","title":"BL Inc vs BORG","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/VcR6qSh-Flo/hqdefault.jpg","opponentId":"borg_w6_wipe_8_n00","altPerspective":false,"date":"03/23/2019"},{"type":"youtube","embedId":"i9vS3D5xi88","url":"https://youtu.be/i9vS3D5xi88","title":"BL Inc vs Booty Looters","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/i9vS3D5xi88/hqdefault.jpg","opponentId":"fake_taxi","altPerspective":false,"date":"03/25/2019"},{"type":"youtube","embedId":"Ba3-5U7JMsw","url":"https://youtu.be/Ba3-5U7JMsw","title":"GP saving HM whale","outcome":"","thumb":"https://img.youtube.com/vi/Ba3-5U7JMsw/hqdefault.jpg","opponentId":"","altPerspective":false,"date":"05/22/2019"},{"type":"youtube","embedId":"S-BnvcYkaQ0","url":"https://youtu.be/S-BnvcYkaQ0","title":"BL inc  vs Unknown","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/S-BnvcYkaQ0/hqdefault.jpg","opponentId":"new_phpkpp","altPerspective":false,"date":"11/17/2019"},{"type":"youtube","embedId":"yfncE-5Rp-8","url":"https://youtu.be/yfncE-5Rp-8","title":"PTS Fights featuring OMB","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/yfncE-5Rp-8/hqdefault.jpg","opponentId":"","altPerspective":false,"date":"06/08/2019"},{"type":"youtube","embedId":"Lus18s3Ahb4","url":"https://www.youtube.com/watch?v=Lus18s3Ahb4&t=5s","title":"BL Inc + Bastion vs Misfit Fleet - Worlds Adrift PvP","outcome":"Sunk","thumb":"https://img.youtube.com/vi/Lus18s3Ahb4/hqdefault.jpg","opponentId":"new_97ihh6_wipe_8_axl","altPerspective":false,"date":"01/26/2019"},{"type":"youtube","embedId":"EXYU2wDONfU","url":"https://www.youtube.com/watch?v=EXYU2wDONfU","title":"BL Inc + Bastion vs Unity - Worlds Adrift PvP","outcome":"Tie","thumb":"https://img.youtube.com/vi/EXYU2wDONfU/hqdefault.jpg","opponentId":"fake_taxi","altPerspective":false,"date":"01/27/2019"},{"type":"youtube","embedId":"pwJ4BDTVCiY","url":"https://www.youtube.com/watch?v=pwJ4BDTVCiY&t=4s","title":"BL Inc vs Definitely Unity - Worlds Adrift PvP","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/pwJ4BDTVCiY/hqdefault.jpg","opponentId":"fake_taxi","altPerspective":false,"date":"01/27/2019"},{"type":"youtube","embedId":"a_EFwMLwJEk","url":"https://www.youtube.com/watch?v=a_EFwMLwJEk","title":"BL Inc vs OMB + Ziwix - Worlds Adrift PvP","outcome":"Sunk","thumb":"https://img.youtube.com/vi/a_EFwMLwJEk/hqdefault.jpg","opponentId":"aliiloas_crew_wipe_8_gkf","altPerspective":false,"date":"02/01/2019"},{"type":"youtube","embedId":"0AW1Xm1i35k","url":"https://www.youtube.com/watch?v=0AW1Xm1i35k","title":"Deletion Bug vs Dirty Pirates - Worlds Adrift \"PvP\"","outcome":"Sunk","thumb":"https://img.youtube.com/vi/0AW1Xm1i35k/hqdefault.jpg","opponentId":"new_ti1zk5_wipe_8_jf7","altPerspective":false,"date":"02/02/2019"},{"type":"youtube","embedId":"C0XvQHGZHP4","url":"https://www.youtube.com/watch?v=C0XvQHGZHP4&t=2s","title":"BL Inc vs Unity - Worlds Adrift PvP","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/C0XvQHGZHP4/hqdefault.jpg","opponentId":"fake_taxi","altPerspective":false,"date":"02/07/2019"},{"type":"youtube","embedId":"uoUkikdK9BA","url":"https://www.youtube.com/watch?v=uoUkikdK9BA","title":"BL Inc vs Deja Vu - Worlds Adrift PvP","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/uoUkikdK9BA/hqdefault.jpg","opponentId":"deja_vu_wipe_8_3z2","altPerspective":false,"date":"02/09/2019"},{"type":"youtube","embedId":"jdtvTuRa1G8","url":"https://youtu.be/jdtvTuRa1G8?si=5C3b7oP4NMS1bPyF","title":"BL Inc vs Every Top 'Crew' / 9 v 15 Fight Night - Worlds Adrift PvP","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/jdtvTuRa1G8/hqdefault.jpg","opponentId":"join_or_die","altPerspective":false,"date":"02/17/2019"},{"type":"youtube","embedId":"E2RNWeMG2U4","url":"https://www.youtube.com/watch?v=E2RNWeMG2U4","title":"BL Inc vs GSA + Gold Fish / 9 vs '30' - Worlds Adrift PvP","outcome":"Sunk","thumb":"https://img.youtube.com/vi/E2RNWeMG2U4/hqdefault.jpg","opponentId":"","altPerspective":false,"date":"02/27/2019"},{"type":"youtube","embedId":"h6ZgDR--LXg","url":"https://www.youtube.com/watch?v=h6ZgDR--LXg","title":"BL Inc Flagship vs Green Pearl - Worlds Adrift PvP","outcome":"Partial Defeat","thumb":"https://img.youtube.com/vi/h6ZgDR--LXg/hqdefault.jpg","opponentId":"green_pearl_wipe_8_3v1","altPerspective":false,"date":"03/13/2019"},{"type":"youtube","embedId":"7R9BqkqZyHM","url":"https://www.youtube.com/watch?v=7R9BqkqZyHM","title":"Borg Fight 5","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/7R9BqkqZyHM/hqdefault.jpg","opponentId":"borg_w6_wipe_8_n00","altPerspective":false,"date":"03/15/2019"},{"type":"youtube","embedId":"uR6ahpW0mx8","url":"https://www.youtube.com/watch?v=uR6ahpW0mx8&t=3s","title":"borg fight 6","outcome":"Clear Defeat","thumb":"https://img.youtube.com/vi/uR6ahpW0mx8/hqdefault.jpg","opponentId":"borg_w6_wipe_8_n00","altPerspective":false,"date":"03/21/2019"},{"type":"youtube","embedId":"enqumdg8cRE","url":"https://www.youtube.com/watch?v=enqumdg8cRE","title":"borg fight 7","outcome":"Clear Defeat","thumb":"https://img.youtube.com/vi/enqumdg8cRE/hqdefault.jpg","opponentId":"borg_w6_wipe_8_n00","altPerspective":false,"date":"04/03/2019"},{"type":"youtube","embedId":"3EV0J4hyj1U","url":"https://www.youtube.com/watch?v=3EV0J4hyj1U&t=6s","title":"Something vs BL - Worlds Adrift PvP","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/3EV0J4hyj1U/hqdefault.jpg","opponentId":"something_badass_wipe_8_a59","altPerspective":false,"date":"06/13/2019"},{"type":"youtube","embedId":"OGV_33sx1BE","url":"https://www.youtube.com/watch?v=OGV_33sx1BE","title":"fight","outcome":"Clear Defeat","thumb":"https://img.youtube.com/vi/OGV_33sx1BE/hqdefault.jpg","opponentId":"something_badass_wipe_8_a59","altPerspective":false,"date":"03/29/2019"},{"type":"youtube","embedId":"VPIm5mVHCKE","url":"https://www.youtube.com/watch?v=VPIm5mVHCKE","title":"epic fight","outcome":"Clear Defeat","thumb":"https://img.youtube.com/vi/VPIm5mVHCKE/hqdefault.jpg","opponentId":"borg_w6_wipe_8_n00","altPerspective":false,"date":"03/10/2019"},{"type":"youtube","embedId":"nGpuW6B5-Pg","url":"https://www.youtube.com/watch?v=nGpuW6B5-Pg","title":"lag op","outcome":"Clear Defeat","thumb":"https://img.youtube.com/vi/nGpuW6B5-Pg/hqdefault.jpg","opponentId":"deja_vu_wipe_8_3z2","altPerspective":false,"date":"03/03/2019"},{"type":"youtube","embedId":"JyuRSfb8OOQ","url":"https://www.youtube.com/watch?v=JyuRSfb8OOQ","title":"2019 02 06 15 49 46","outcome":"Got Sunk","thumb":"https://img.youtube.com/vi/JyuRSfb8OOQ/hqdefault.jpg","opponentId":"green_pearl_wipe_8_3v1","altPerspective":false,"date":"02/07/2019"},{"type":"youtube","embedId":"ER6lmb9nzvs","url":"https://www.youtube.com/watch?v=ER6lmb9nzvs","title":"2019 02 05 15 42 59","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/ER6lmb9nzvs/hqdefault.jpg","opponentId":"green_pearl_wipe_8_3v1","altPerspective":false,"date":"02/06/2019"},{"type":"youtube","embedId":"ER6lmb9nzvs","url":"https://www.youtube.com/watch?v=ER6lmb9nzvs","title":"2019 02 05 15 42 59","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/ER6lmb9nzvs/hqdefault.jpg","opponentId":"deja_vu_wipe_8_3z2","altPerspective":false,"date":"02/06/2019"},{"type":"youtube","embedId":"PmNs8LPKSj0","url":"https://www.youtube.com/watch?v=PmNs8LPKSj0","title":"2019 02 05 20 37 54","outcome":"Sunk","thumb":"https://img.youtube.com/vi/PmNs8LPKSj0/hqdefault.jpg","opponentId":"","altPerspective":false,"date":"02/06/2019"},{"type":"youtube","embedId":"L9PVo9LHMEs","url":"https://www.youtube.com/watch?v=L9PVo9LHMEs","title":"BL Inc vs Beaver Solo","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/L9PVo9LHMEs/hqdefault.jpg","opponentId":"beaver_dam_wipe_8_b66","altPerspective":false,"date":"02/02/2019"},{"type":"youtube","embedId":"PO4r-WKp9fQ","url":"https://www.youtube.com/watch?v=PO4r-WKp9fQ","title":"Bork Left Inc vs Join Or Die - Worlds Adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/PO4r-WKp9fQ/hqdefault.jpg","opponentId":"join_or_die","altPerspective":false,"date":"01/25/2019"},{"type":"youtube","embedId":"XYOT0pQQ4VA","url":"https://www.youtube.com/watch?v=XYOT0pQQ4VA","title":"Desktop 2018 11 09   22 55 34 03","outcome":"Partial Defeat","thumb":"https://img.youtube.com/vi/XYOT0pQQ4VA/hqdefault.jpg","opponentId":"new_25gq31","altPerspective":true,"date":"11/10/2018"},{"type":"youtube","embedId":"yIPaCvqF6hs","url":"https://www.youtube.com/watch?v=yIPaCvqF6hs","title":"BL.Inc vs Fake Taxi aka Unity","outcome":"Sunk","thumb":"https://img.youtube.com/vi/yIPaCvqF6hs/hqdefault.jpg","opponentId":"fake_taxi","altPerspective":false,"date":"01/11/2019"},{"type":"youtube","embedId":"OIHfMcCBa4A","url":"https://youtu.be/OIHfMcCBa4A?si=tBXCoeT2xpl33yDx","title":"We found a small stash","outcome":"","thumb":"https://img.youtube.com/vi/OIHfMcCBa4A/hqdefault.jpg","opponentId":"natives_w7","altPerspective":false,"date":"03/26/2019"},{"type":"youtube","embedId":"E2RNWeMG2U4","url":"https://www.youtube.com/watch?v=E2RNWeMG2U4","title":"BL Inc vs GSA + Gold Fish / 9 vs '30' - Worlds Adrift PvP","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/E2RNWeMG2U4/hqdefault.jpg","opponentId":"new_1a7213","altPerspective":false},{"type":"youtube","embedId":"E2RNWeMG2U4","url":"https://www.youtube.com/watch?v=E2RNWeMG2U4","title":"BL Inc vs GSA + Gold Fish / 9 vs '30' - Worlds Adrift PvP","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/E2RNWeMG2U4/hqdefault.jpg","opponentId":"new_wgrecj","altPerspective":true},{"type":"youtube","embedId":"WnYvDe80X-4","url":"https://www.youtube.com/watch?v=WnYvDe80X-4","title":"BL inc vs GSA (Glorious Sky Armada) Worlds Adrift pvp","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/WnYvDe80X-4/hqdefault.jpg","opponentId":"new_1a7213","altPerspective":true}], images:[], links:["bl_inc_w9"]},
   {id:"borg_w9_wipe_6_y0g", name:"Borg", era:"Wipe 6", desc:"", members:"", link:"", x:50.33, y:38.4, w:2.2, h:2.38, videos:[], images:[], links:["borg_w6","borg_w6_wipe_8_n00"]},
   {id:"legacy", name:"LEGACY", era:"Wipe 9", desc:"", members:"", link:"", x:57.77, y:9.36, w:1.5, h:3.13, videos:[], images:[], links:["legacy_wipe_8_w71"]},
   {id:"legacy_wipe_8_w71", name:"LEGACY", era:"Wipe 8", desc:"", members:"", link:"", x:57.77, y:12.49, w:1.5, h:0.77, videos:[], images:[], links:["legacy"]},
@@ -730,29 +755,29 @@ const HOTSPOTS = [
   {id:"bork_vela_security", name:"The Bork / Vela Security", era:"Wipe 8", desc:"", members:"", link:"", x:38.97, y:28.77, w:1.8, h:0.01, videos:[{"type":"youtube","embedId":"436SuPiU7tw","url":"https://youtu.be/436SuPiU7tw?si=sPBtU3cAwOoSfFL3","title":"Freeport Security vs Q10 Crew - Worlds Adrift","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/436SuPiU7tw/hqdefault.jpg","opponentId":"aliiloas_crew","date":"07/24/2018"},{"type":"youtube","embedId":"bAizqzzLqEs","url":"https://youtu.be/bAizqzzLqEs?si=b4YGSB1EdS-4H0if","title":"Vela Security vs Profane and Trippaholic + Bossa's Game - Worlds Adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/bAizqzzLqEs/hqdefault.jpg","opponentId":"krob","date":"08/07/2018"}], images:[], links:["bork_vela_security_wipe_7_9be","new_25gq31","p4g"]},
   {id:"bork_vela_security_wipe_7_9be", name:"The Bork / Vela Security", era:"Wipe 7", desc:"A conglomeration of the Bork, Dangerseeker/Docfreeman Duo, Casually Addicted, and Trippaholic (briefly).\n\nThey defended the freeport.", members:"", link:"", x:38.97, y:28.78, w:1.8, h:3.59, videos:[{"type":"youtube","embedId":"bAizqzzLqEs","url":"https://www.youtube.com/watch?v=bAizqzzLqEs","title":"Vela Security vs Profane and Trippaholic + Bossa's Game - Worlds Adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/bAizqzzLqEs/hqdefault.jpg","opponentId":"krob_wipe_7_i8k","date":"08/07/2018"},{"type":"youtube","embedId":"436SuPiU7tw","url":"https://www.youtube.com/watch?v=436SuPiU7tw","title":"Freeport Security vs Q10 Crew - Worlds Adrift","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/436SuPiU7tw/hqdefault.jpg","opponentId":"aliiloas_crew_wipe_7_lbm","date":"07/24/2018"}], images:[], links:["bork_vela_security","new_25gq31","p4g"]},
   {id:"crimson_federation", name:"Crimson Federation", era:"Wipe 8", desc:"", members:"", link:"", x:50.29, y:23.63, w:1.5, h:5.15, videos:[], images:[], links:["crimson_federation_wipe_7_xy7"]},
-  {id:"crimson_federation_wipe_7_xy7", name:"Crimson Federation", era:"Wipe 7", desc:"", members:"", link:"", x:50.29, y:28.78, w:1.5, h:6.12, videos:[{"type":"youtube","embedId":"j6hTrcravr8","url":"https://www.youtube.com/watch?v=j6hTrcravr8","title":"aliiloa   09 12 2018 15 37 53   Empress Challenger!!!!! vs Crimson Federation","outcome":"Sunk","thumb":"https://img.youtube.com/vi/j6hTrcravr8/hqdefault.jpg","opponentId":"aliiloas_crew_wipe_7_lbm","altPerspective":false,"date":"07/19/2026"}], images:[], links:["crimson_federation"]},
+  {id:"crimson_federation_wipe_7_xy7", name:"Crimson Federation", era:"Wipe 7", desc:"", members:"", link:"", x:50.29, y:28.78, w:1.5, h:9.19, videos:[{"type":"youtube","embedId":"j6hTrcravr8","url":"https://www.youtube.com/watch?v=j6hTrcravr8","title":"aliiloa   09 12 2018 15 37 53   Empress Challenger!!!!! vs Crimson Federation","outcome":"Sunk","thumb":"https://img.youtube.com/vi/j6hTrcravr8/hqdefault.jpg","opponentId":"aliiloas_crew_wipe_7_lbm","altPerspective":false,"date":"07/19/2026"}], images:[], links:["crimson_federation"]},
   {id:"salvation", name:"Salvation", era:"Wipe 8", desc:"", members:"", link:"", x:56.6, y:27.28, w:1.5, h:1.5, videos:[], images:[], links:["salvation_wipe_7_rn7"]},
   {id:"salvation_wipe_7_rn7", name:"Salvation", era:"Wipe 7", desc:"", members:"", link:"", x:56.6, y:28.78, w:1.5, h:0.15, videos:[], images:[], links:["salvation"]},
   {id:"natives_w7", name:"Natives", era:"Wipe 8", desc:"", members:"", link:"", x:52.27, y:14.05, w:1.5, h:14.73, videos:[], images:[], links:["natives_w7_wipe_7_c0u","natives_w7_wipe_6_8qi","natives_w7_wipe_5_d3p"]},
   {id:"natives_w7_wipe_7_c0u", name:"Natives", era:"Wipe 7", desc:"", members:"", link:"", x:52.27, y:28.78, w:1.5, h:9.62, videos:[], images:[], links:["natives_w7","natives_w7_wipe_6_8qi","natives_w7_wipe_5_d3p"]},
   {id:"natives_w7_wipe_6_8qi", name:"Natives", era:"Wipe 6", desc:"", members:"", link:"", x:52.27, y:38.4, w:1.5, h:3.81, videos:[], images:[], links:["natives_w7","natives_w7_wipe_7_c0u","natives_w7_wipe_5_d3p"]},
   {id:"natives_w7_wipe_5_d3p", name:"Natives", era:"Wipe 5", desc:"", members:"", link:"", x:52.27, y:42.21, w:1.5, h:0.64, videos:[], images:[], links:["natives_w7","natives_w7_wipe_7_c0u","natives_w7_wipe_6_8qi"]},
-  {id:"beaver_dam", name:"The Beaver Dam", era:"Wipe 9", desc:"", members:"", link:"", x:70.53, y:9.78, w:1.5, h:2.71, videos:[], images:[], links:["beaver_dam_wipe_8_b66","beaver_dam_wipe_8_b66_wipe_8_5tf","beaver_dam_wipe_7_yy1","beaver_dam_wipe_6_thz","beaver_dam_wipe_5_eek","beaver_dam_wipe_4_70x"]},
-  {id:"beaver_dam_wipe_7_yy1", name:"The Beaver Dam", era:"Wipe 7", desc:"", members:"", link:"", x:70.53, y:28.78, w:1.5, h:9.62, videos:[{"type":"youtube","embedId":"DDUGhXZKEsk","url":"https://youtu.be/DDUGhXZKEsk?si=LoOBKY8VausAz4YB","title":"Worlds Adrift PvP - Bork on the Brain! 2.1.1","outcome":"Sunk","thumb":"https://img.youtube.com/vi/DDUGhXZKEsk/hqdefault.jpg","opponentId":"the_bork","date":"06/17/2018"},{"type":"youtube","embedId":"PAasjrrl9DE","url":"https://www.youtube.com/watch?v=PAasjrrl9DE","title":"Worlds Adrift PvP - Beaver Dam vs Sterdekie! (2-way POV fight) 2.1.1","outcome":"Sunk","thumb":"https://img.youtube.com/vi/PAasjrrl9DE/hqdefault.jpg","opponentId":"new_renpc4","date":"06/25/2018"},{"type":"youtube","embedId":"XLL3MFOVh3o","url":"https://www.youtube.com/watch?v=XLL3MFOVh3o","title":"Worlds Adrift PvP - Busting the Bubble Busters 2.2.3","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/XLL3MFOVh3o/hqdefault.jpg","opponentId":"vexus_w3","date":"06/29/2018"},{"type":"youtube","embedId":"jOrYc-NkhfI","url":"https://www.youtube.com/watch?v=jOrYc-NkhfI","title":"Beaver Kountry Patrol (Vexus Scout Eviction)","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/jOrYc-NkhfI/hqdefault.jpg","opponentId":"vexus_w3","date":"06/24/2018"},{"type":"youtube","embedId":"b5Uix9rMFOg","url":"https://www.youtube.com/watch?v=b5Uix9rMFOg","title":"Worlds Adrift Tier 4 Eviction","outcome":"Sunk","thumb":"https://img.youtube.com/vi/b5Uix9rMFOg/hqdefault.jpg","opponentId":"new_hbrvps","date":"05/23/2018"},{"type":"youtube","embedId":"rOzeedmjwlM","url":"https://www.youtube.com/watch?v=rOzeedmjwlM","title":"Worlds Adrift PvP - Assassin 2.2.3","outcome":"","thumb":"https://img.youtube.com/vi/rOzeedmjwlM/hqdefault.jpg","opponentId":"the_bork","date":"07/03/2018"},{"type":"youtube","embedId":"oPPHyqdvJ-Y","url":"https://www.youtube.com/watch?v=oPPHyqdvJ-Y","title":"Bork to the Future","outcome":"","thumb":"https://img.youtube.com/vi/oPPHyqdvJ-Y/hqdefault.jpg","opponentId":"the_bork","date":"08/01/2018"}], images:[], links:["beaver_dam_wipe_8_b66","beaver_dam_wipe_8_b66_wipe_8_5tf","beaver_dam","beaver_dam_wipe_6_thz","beaver_dam_wipe_5_eek","beaver_dam_wipe_4_70x"]},
-  {id:"beaver_dam_wipe_6_thz", name:"The Beaver Dam", era:"Wipe 6", desc:"", members:"", link:"", x:70.53, y:38.4, w:1.5, h:3.81, videos:[], images:[], links:["beaver_dam_wipe_8_b66","beaver_dam_wipe_8_b66_wipe_8_5tf","beaver_dam","beaver_dam_wipe_7_yy1","beaver_dam_wipe_5_eek","beaver_dam_wipe_4_70x"]},
-  {id:"beaver_dam_wipe_5_eek", name:"The Beaver Dam", era:"Wipe 5", desc:"", members:"", link:"", x:70.53, y:42.21, w:1.5, h:1.7, videos:[], images:[], links:["beaver_dam_wipe_8_b66","beaver_dam_wipe_8_b66_wipe_8_5tf","beaver_dam","beaver_dam_wipe_7_yy1","beaver_dam_wipe_6_thz","beaver_dam_wipe_4_70x"]},
-  {id:"beaver_dam_wipe_4_70x", name:"The Beaver Dam", era:"Wipe 4", desc:"", members:"", link:"", x:70.53, y:43.91, w:1.5, h:0.85, videos:[], images:[], links:["beaver_dam_wipe_8_b66","beaver_dam_wipe_8_b66_wipe_8_5tf","beaver_dam","beaver_dam_wipe_7_yy1","beaver_dam_wipe_6_thz","beaver_dam_wipe_5_eek"]},
+  {id:"beaver_dam", name:"The Beaver Dam", era:"Wipe 9", desc:"", members:"", link:"", x:70.53, y:9.78, w:1.5, h:2.71, videos:[], images:[], links:["beaver_dam_wipe_8_b66","beaver_dam_wipe_7_yy1","beaver_dam_wipe_6_thz","beaver_dam_wipe_5_eek","beaver_dam_wipe_4_70x"]},
+  {id:"beaver_dam_wipe_7_yy1", name:"The Beaver Dam", era:"Wipe 7", desc:"", members:"", link:"", x:70.53, y:28.78, w:1.5, h:9.62, videos:[{"type":"youtube","embedId":"DDUGhXZKEsk","url":"https://youtu.be/DDUGhXZKEsk?si=LoOBKY8VausAz4YB","title":"Worlds Adrift PvP - Bork on the Brain! 2.1.1","outcome":"Sunk","thumb":"https://img.youtube.com/vi/DDUGhXZKEsk/hqdefault.jpg","opponentId":"the_bork","date":"06/17/2018"},{"type":"youtube","embedId":"PAasjrrl9DE","url":"https://www.youtube.com/watch?v=PAasjrrl9DE","title":"Worlds Adrift PvP - Beaver Dam vs Sterdekie! (2-way POV fight) 2.1.1","outcome":"Sunk","thumb":"https://img.youtube.com/vi/PAasjrrl9DE/hqdefault.jpg","opponentId":"new_renpc4","date":"06/25/2018"},{"type":"youtube","embedId":"XLL3MFOVh3o","url":"https://www.youtube.com/watch?v=XLL3MFOVh3o","title":"Worlds Adrift PvP - Busting the Bubble Busters 2.2.3","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/XLL3MFOVh3o/hqdefault.jpg","opponentId":"vexus_w3","date":"06/29/2018"},{"type":"youtube","embedId":"jOrYc-NkhfI","url":"https://www.youtube.com/watch?v=jOrYc-NkhfI","title":"Beaver Kountry Patrol (Vexus Scout Eviction)","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/jOrYc-NkhfI/hqdefault.jpg","opponentId":"vexus_w3","date":"06/24/2018"},{"type":"youtube","embedId":"b5Uix9rMFOg","url":"https://www.youtube.com/watch?v=b5Uix9rMFOg","title":"Worlds Adrift Tier 4 Eviction","outcome":"Sunk","thumb":"https://img.youtube.com/vi/b5Uix9rMFOg/hqdefault.jpg","opponentId":"new_hbrvps","date":"05/23/2018"},{"type":"youtube","embedId":"rOzeedmjwlM","url":"https://www.youtube.com/watch?v=rOzeedmjwlM","title":"Worlds Adrift PvP - Assassin 2.2.3","outcome":"","thumb":"https://img.youtube.com/vi/rOzeedmjwlM/hqdefault.jpg","opponentId":"the_bork","date":"07/03/2018"},{"type":"youtube","embedId":"oPPHyqdvJ-Y","url":"https://www.youtube.com/watch?v=oPPHyqdvJ-Y","title":"Bork to the Future","outcome":"","thumb":"https://img.youtube.com/vi/oPPHyqdvJ-Y/hqdefault.jpg","opponentId":"the_bork","date":"08/01/2018"}], images:[], links:["beaver_dam_wipe_8_b66","beaver_dam","beaver_dam_wipe_6_thz","beaver_dam_wipe_5_eek","beaver_dam_wipe_4_70x"]},
+  {id:"beaver_dam_wipe_6_thz", name:"The Beaver Dam", era:"Wipe 6", desc:"", members:"", link:"", x:70.53, y:38.4, w:1.5, h:3.81, videos:[], images:[], links:["beaver_dam_wipe_8_b66","beaver_dam","beaver_dam_wipe_7_yy1","beaver_dam_wipe_5_eek","beaver_dam_wipe_4_70x"]},
+  {id:"beaver_dam_wipe_5_eek", name:"The Beaver Dam", era:"Wipe 5", desc:"", members:"", link:"", x:70.53, y:42.21, w:1.5, h:1.7, videos:[], images:[], links:["beaver_dam_wipe_8_b66","beaver_dam","beaver_dam_wipe_7_yy1","beaver_dam_wipe_6_thz","beaver_dam_wipe_4_70x"]},
+  {id:"beaver_dam_wipe_4_70x", name:"The Beaver Dam", era:"Wipe 4", desc:"", members:"", link:"", x:70.53, y:43.91, w:1.5, h:0.85, videos:[], images:[], links:["beaver_dam_wipe_8_b66","beaver_dam","beaver_dam_wipe_7_yy1","beaver_dam_wipe_6_thz","beaver_dam_wipe_5_eek"]},
   {id:"bastions_crew", name:"Bastion's Weird Crew", era:"Wipe 6", desc:"", members:"", link:"", x:40.04, y:41.08, w:2.07, h:1.13, videos:[], images:[], links:["bastions_crew_wipe_5_szn"]},
   {id:"bastions_crew_wipe_5_szn", name:"Bastion's Weird Crew", era:"Wipe 5", desc:"", members:"", link:"", x:40.04, y:42.21, w:2.07, h:0.37, videos:[], images:[], links:["bastions_crew"]},
   {id:"aliiloas_crew", name:"Aliiloa's Crew", era:"Wipe 9", desc:"", members:"", link:"", x:54.3, y:9.36, w:1.5, h:3.13, videos:[], images:[], links:["aliiloas_crew_wipe_8_gkf","aliiloas_crew_wipe_7_lbm","aliiloas_crew_wipe_6_qh9","aliiloas_crew_wipe_5_ufs","aliiloas_crew_wipe_4_okk","aliiloas_crew_wipe_3_kj1"]},
-  {id:"aliiloas_crew_wipe_8_gkf", name:"Aliiloa's Crew", era:"Wipe 8", desc:"", members:"", link:"", x:54.3, y:12.49, w:1.5, h:16.29, videos:[{"type":"youtube","embedId":"CBiAWIQBwPU","url":"https://www.  youtube.com/watch?v=CBiAWIQBwPU","title":"fight with eranok's big castle thing","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/CBiAWIQBwPU/hqdefault.jpg","opponentId":"surprise_baguette","altPerspective":false,"date":"09/23/2018"},{"type":"youtube","embedId":"7FpFMpKSE3g","url":"https://www.youtube.com/watch?v=7FpFMpKSE3g","title":"Me + Dotagod vs small beaver ship","outcome":"Sunk","thumb":"https://img.youtube.com/vi/7FpFMpKSE3g/hqdefault.jpg","opponentId":"beaver_dam_wipe_8_b66_wipe_8_5tf","altPerspective":false,"date":"10/02/2018"},{"type":"youtube","embedId":"0PjwkdE27HI","url":"https://www.youtube.com/watch?v=0PjwkdE27HI","title":"1v2 vs eranok","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/0PjwkdE27HI/hqdefault.jpg","opponentId":"surprise_baguette","altPerspective":false,"date":"10/22/2018"},{"type":"youtube","embedId":"skRiFFFT56I","url":"https://www.youtube.com/watch?v=skRiFFFT56I","title":"PMD's creation (Monster Dangler) vs bork + strite","outcome":"Partial Defeat","thumb":"https://img.youtube.com/vi/skRiFFFT56I/hqdefault.jpg","opponentId":"new_25gq31","altPerspective":false,"date":"11/25/2018"},{"type":"youtube","embedId":"nG_3Vx3yqUA","url":"https://youtu.be/nG_3Vx3yqUA?si=mfBUMJRT9TSiHDk5","title":"Worlds Adrift - Hammerhead vs Aluminati","outcome":"Tie","thumb":"https://img.youtube.com/vi/nG_3Vx3yqUA/hqdefault.jpg","opponentId":"aluminati","altPerspective":false,"date":"11/01/2018"},{"type":"youtube","embedId":"pykSBVPMz0s","url":"https://www.youtube.com/watch?v=pykSBVPMz0s","title":"mock fight vs unity","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/pykSBVPMz0s/hqdefault.jpg","opponentId":"new_cktc19","altPerspective":false,"date":"12/02/2018"},{"type":"youtube","embedId":"sTVhYqbbsG8","url":"https://www.youtube.com/watch?v=sTVhYqbbsG8","title":"dinghy vs aluminati","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/sTVhYqbbsG8/hqdefault.jpg","opponentId":"aluminati","altPerspective":false,"date":"12/03/2018"},{"type":"youtube","embedId":"QzI678gw9rI","url":"https://www.youtube.com/watch?v=QzI678gw9rI","title":"Full fight pvp - worlds adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/QzI678gw9rI/hqdefault.jpg","opponentId":"new_97ihh6_wipe_8_axl","altPerspective":false,"date":"10/31/2018"},{"type":"youtube","embedId":"MIkk4nmhCy0","url":"https://www.youtube.com/watch?v=MIkk4nmhCy0","title":"lul rip tripp - worlds adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/MIkk4nmhCy0/hqdefault.jpg","opponentId":"krob","altPerspective":false,"date":"11/29/2018"},{"type":"youtube","embedId":"jM45VHKDIVk","url":"https://www.youtube.com/watch?v=jM45VHKDIVk","title":"Bobbie and Noob Vs Deja Vu","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/jM45VHKDIVk/hqdefault.jpg","opponentId":"deja_vu_wipe_8_3z2","altPerspective":false,"date":"02/28/2019"}], images:[], links:["aliiloas_crew","aliiloas_crew_wipe_7_lbm","aliiloas_crew_wipe_6_qh9","aliiloas_crew_wipe_5_ufs","aliiloas_crew_wipe_4_okk","aliiloas_crew_wipe_3_kj1"]},
+  {id:"aliiloas_crew_wipe_8_gkf", name:"Aliiloa's Crew", era:"Wipe 8", desc:"", members:"", link:"", x:54.3, y:12.49, w:1.5, h:16.29, videos:[{"type":"youtube","embedId":"CBiAWIQBwPU","url":"https://www.  youtube.com/watch?v=CBiAWIQBwPU","title":"fight with eranok's big castle thing","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/CBiAWIQBwPU/hqdefault.jpg","opponentId":"surprise_baguette","altPerspective":false,"date":"09/23/2018"},{"type":"youtube","embedId":"7FpFMpKSE3g","url":"https://www.youtube.com/watch?v=7FpFMpKSE3g","title":"Me + Dotagod vs small beaver ship","outcome":"Sunk","thumb":"https://img.youtube.com/vi/7FpFMpKSE3g/hqdefault.jpg","opponentId":"beaver_dam_wipe_8_b66","altPerspective":false,"date":"10/02/2018"},{"type":"youtube","embedId":"0PjwkdE27HI","url":"https://www.youtube.com/watch?v=0PjwkdE27HI","title":"1v2 vs eranok","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/0PjwkdE27HI/hqdefault.jpg","opponentId":"surprise_baguette","altPerspective":false,"date":"10/22/2018"},{"type":"youtube","embedId":"skRiFFFT56I","url":"https://www.youtube.com/watch?v=skRiFFFT56I","title":"PMD's creation (Monster Dangler) vs bork + strite","outcome":"Partial Defeat","thumb":"https://img.youtube.com/vi/skRiFFFT56I/hqdefault.jpg","opponentId":"new_25gq31","altPerspective":false,"date":"11/25/2018"},{"type":"youtube","embedId":"nG_3Vx3yqUA","url":"https://youtu.be/nG_3Vx3yqUA?si=mfBUMJRT9TSiHDk5","title":"Worlds Adrift - Hammerhead vs Aluminati","outcome":"Tie","thumb":"https://img.youtube.com/vi/nG_3Vx3yqUA/hqdefault.jpg","opponentId":"aluminati","altPerspective":false,"date":"11/01/2018"},{"type":"youtube","embedId":"pykSBVPMz0s","url":"https://www.youtube.com/watch?v=pykSBVPMz0s","title":"mock fight vs unity","outcome":"Clear Victory","thumb":"https://img.youtube.com/vi/pykSBVPMz0s/hqdefault.jpg","opponentId":"new_cktc19","altPerspective":false,"date":"12/02/2018"},{"type":"youtube","embedId":"sTVhYqbbsG8","url":"https://www.youtube.com/watch?v=sTVhYqbbsG8","title":"dinghy vs aluminati","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/sTVhYqbbsG8/hqdefault.jpg","opponentId":"aluminati","altPerspective":false,"date":"12/03/2018"},{"type":"youtube","embedId":"QzI678gw9rI","url":"https://www.youtube.com/watch?v=QzI678gw9rI","title":"Full fight pvp - worlds adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/QzI678gw9rI/hqdefault.jpg","opponentId":"new_97ihh6_wipe_8_axl","altPerspective":false,"date":"10/31/2018"},{"type":"youtube","embedId":"MIkk4nmhCy0","url":"https://www.youtube.com/watch?v=MIkk4nmhCy0","title":"lul rip tripp - worlds adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/MIkk4nmhCy0/hqdefault.jpg","opponentId":"krob","altPerspective":false,"date":"11/29/2018"},{"type":"youtube","embedId":"jM45VHKDIVk","url":"https://www.youtube.com/watch?v=jM45VHKDIVk","title":"Bobbie and Noob Vs Deja Vu","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/jM45VHKDIVk/hqdefault.jpg","opponentId":"deja_vu_wipe_8_3z2","altPerspective":false,"date":"02/28/2019"}], images:[], links:["aliiloas_crew","aliiloas_crew_wipe_7_lbm","aliiloas_crew_wipe_6_qh9","aliiloas_crew_wipe_5_ufs","aliiloas_crew_wipe_4_okk","aliiloas_crew_wipe_3_kj1"]},
   {id:"aliiloas_crew_wipe_7_lbm", name:"Aliiloa's Crew", era:"Wipe 7", desc:"", members:"", link:"", x:54.3, y:28.78, w:1.5, h:9.62, videos:[{"type":"youtube","embedId":"2TtLB3yEHes","url":"https://www.youtube.com/watch?v=2TtLB3yEHes","title":"Worlds Adrift - Blightbringer vs Zatios","outcome":"Sunk","thumb":"https://img.youtube.com/vi/2TtLB3yEHes/hqdefault.jpg","opponentId":"zafiuos_crew","date":"06/17/2018"},{"type":"youtube","embedId":"V54HGMyVYLA","url":"https://www.youtube.com/watch?v=V54HGMyVYLA","title":"one vs four ships absolute aidsfest","outcome":"","thumb":"https://img.youtube.com/vi/V54HGMyVYLA/hqdefault.jpg","opponentId":"bork_vela_security_wipe_7_9be","date":"07/24/2018"},{"type":"youtube","embedId":"Q3u-sog1CG8","url":"https://www.youtube.com/watch?v=Q3u-sog1CG8","title":"Screwing with PMD","outcome":"","thumb":"https://img.youtube.com/vi/Q3u-sog1CG8/hqdefault.jpg","opponentId":"natives_w7_wipe_7_c0u","date":"05/20/2018"},{"type":"youtube","embedId":"7xm8cyLqh5Y","url":"https://www.youtube.com/watch?v=7xm8cyLqh5Y","title":"Worlds Adrift - Fighting 2 bork ships in vela","outcome":"","thumb":"https://img.youtube.com/vi/7xm8cyLqh5Y/hqdefault.jpg","opponentId":"the_bork","date":"06/26/2018"},{"type":"youtube","embedId":"0tigmQzp02o","url":"https://www.youtube.com/watch?v=0tigmQzp02o","title":"fight with gypsy","outcome":"Tie","thumb":"https://img.youtube.com/vi/0tigmQzp02o/hqdefault.jpg","opponentId":"bork_vela_security_wipe_7_9be","date":"07/22/2018"},{"type":"youtube","embedId":"Vm8S5GJsqzE","url":"https://youtu.be/Vm8S5GJsqzE?si=7DFza_HtX4fdAJYc","title":"fight with koon","outcome":"Tie","thumb":"https://img.youtube.com/vi/Vm8S5GJsqzE/hqdefault.jpg","opponentId":"new_0h5uo9","date":"07/30/2018"}], images:[], links:["aliiloas_crew","aliiloas_crew_wipe_8_gkf","aliiloas_crew_wipe_6_qh9","aliiloas_crew_wipe_5_ufs","aliiloas_crew_wipe_4_okk","aliiloas_crew_wipe_3_kj1"]},
   {id:"aliiloas_crew_wipe_6_qh9", name:"Aliiloa's Crew", era:"Wipe 6", desc:"", members:"", link:"", x:54.3, y:38.4, w:1.5, h:3.81, videos:[], images:[], links:["aliiloas_crew","aliiloas_crew_wipe_8_gkf","aliiloas_crew_wipe_7_lbm","aliiloas_crew_wipe_5_ufs","aliiloas_crew_wipe_4_okk","aliiloas_crew_wipe_3_kj1"]},
   {id:"aliiloas_crew_wipe_5_ufs", name:"Aliiloa's Crew", era:"Wipe 5", desc:"", members:"", link:"", x:54.3, y:42.21, w:1.5, h:1.7, videos:[], images:[], links:["aliiloas_crew","aliiloas_crew_wipe_8_gkf","aliiloas_crew_wipe_7_lbm","aliiloas_crew_wipe_6_qh9","aliiloas_crew_wipe_4_okk","aliiloas_crew_wipe_3_kj1"]},
   {id:"aliiloas_crew_wipe_4_okk", name:"Aliiloa's Crew", era:"Wipe 4", desc:"", members:"", link:"", x:54.3, y:43.91, w:1.5, h:1.22, videos:[], images:[], links:["aliiloas_crew","aliiloas_crew_wipe_8_gkf","aliiloas_crew_wipe_7_lbm","aliiloas_crew_wipe_6_qh9","aliiloas_crew_wipe_5_ufs","aliiloas_crew_wipe_3_kj1"]},
   {id:"aliiloas_crew_wipe_3_kj1", name:"Aliiloa's Crew", era:"Wipe 3", desc:"", members:"", link:"", x:54.3, y:45.14, w:1.5, h:10.29, videos:[], images:[], links:["aliiloas_crew","aliiloas_crew_wipe_8_gkf","aliiloas_crew_wipe_7_lbm","aliiloas_crew_wipe_6_qh9","aliiloas_crew_wipe_5_ufs","aliiloas_crew_wipe_4_okk"]},
   {id:"borg_w6", name:"Borg", era:"Wipe 9", desc:"", members:"", link:"", x:50.54, y:9.53, w:1.5, h:2.96, videos:[], images:[], links:["borg_w6_wipe_8_n00","borg_w9_wipe_6_y0g"]},
-  {id:"borg_w6_wipe_8_n00", name:"Borg", era:"Wipe 8", desc:"", members:"", link:"", x:50.54, y:12.49, w:1.5, h:5.38, videos:[{"type":"youtube","embedId":"bgeA1hPAHAg","url":"https://www.youtube.com/watch?v=bgeA1hPAHAg","title":"Run for your life BL Inc","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/bgeA1hPAHAg/hqdefault.jpg","opponentId":"bl_inc_w9_wipe_8_dah","altPerspective":false,"date":"02/23/2019"},{"type":"youtube","embedId":"KLBGDMdiWo8","url":"https://www.youtube.com/watch?v=KLBGDMdiWo8","title":"The BORG Hive Mind vs. BL Inc. |  Lag Festival Bombardment","outcome":"Got Sunk","thumb":"https://img.youtube.com/vi/KLBGDMdiWo8/hqdefault.jpg","opponentId":"bl_inc_w9_wipe_8_dah","altPerspective":false,"date":"03/24/2019"},{"type":"youtube","embedId":"xDMPTbelvuY","url":"https://www.youtube.com/watch?v=xDMPTbelvuY&t=374s","title":"Rapscallions VS  Hive Mind Corps   Worlds Adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/xDMPTbelvuY/hqdefault.jpg","opponentId":"new_kiu5ev","altPerspective":false,"date":"05/12/2019"}], images:[], links:["borg_w6","borg_w9_wipe_6_y0g"]},
+  {id:"borg_w6_wipe_8_n00", name:"Borg", era:"Wipe 8", desc:"", members:"", link:"", x:50.54, y:12.49, w:1.5, h:10.54, videos:[{"type":"youtube","embedId":"bgeA1hPAHAg","url":"https://www.youtube.com/watch?v=bgeA1hPAHAg","title":"Run for your life BL Inc","outcome":"Partial Victory","thumb":"https://img.youtube.com/vi/bgeA1hPAHAg/hqdefault.jpg","opponentId":"bl_inc_w9_wipe_8_dah","altPerspective":false,"date":"02/23/2019"},{"type":"youtube","embedId":"KLBGDMdiWo8","url":"https://www.youtube.com/watch?v=KLBGDMdiWo8","title":"The BORG Hive Mind vs. BL Inc. |  Lag Festival Bombardment","outcome":"Got Sunk","thumb":"https://img.youtube.com/vi/KLBGDMdiWo8/hqdefault.jpg","opponentId":"bl_inc_w9_wipe_8_dah","altPerspective":false,"date":"03/24/2019"},{"type":"youtube","embedId":"xDMPTbelvuY","url":"https://www.youtube.com/watch?v=xDMPTbelvuY&t=374s","title":"Rapscallions VS  Hive Mind Corps   Worlds Adrift","outcome":"Sunk","thumb":"https://img.youtube.com/vi/xDMPTbelvuY/hqdefault.jpg","opponentId":"new_kiu5ev","altPerspective":false,"date":"05/12/2019"}], images:[], links:["borg_w6","borg_w9_wipe_6_y0g"]},
   {id:"omegavex", name:"OmegaVex (Internal Engines)", era:"Wipe 6", desc:"", members:"", link:"", x:21.9, y:40.78, w:3.07, h:1.43, videos:[], images:[], links:["omegavex_wipe_5_n0z","omegavex_wipe_4_2l0"]},
   {id:"omegavex_wipe_5_n0z", name:"OmegaVex (Internal Engines)", era:"Wipe 5", desc:"", members:"", link:"", x:21.9, y:42.21, w:3.07, h:1.7, videos:[], images:[], links:["omegavex","omegavex_wipe_4_2l0"]},
   {id:"omegavex_wipe_4_2l0", name:"OmegaVex (Internal Engines)", era:"Wipe 4", desc:"", members:"", link:"", x:21.9, y:43.91, w:3.07, h:1.22, videos:[], images:[], links:["omegavex","omegavex_wipe_5_n0z"]},
@@ -811,7 +836,7 @@ const HOTSPOTS = [
   {id:"new_97ihh6_wipe_7_xpv", name:"Misfit Army", era:"Wipe 7", desc:"", members:"", link:"", x:63.8, y:28.78, w:1.4, h:0.14, videos:[], images:[], links:["new_97ihh6","new_97ihh6_wipe_8_axl"]},
   {id:"new_wwrypn", name:"Vagabonds", era:"Wipe 8", desc:"", members:"", link:"", x:46.07, y:21.5, w:1.53, h:7.28, videos:[], images:[], links:["new_wwrypn_wipe_7_w8u"]},
   {id:"new_wwrypn_wipe_7_w8u", name:"Vagabonds", era:"Wipe 7", desc:"", members:"", link:"", x:46.07, y:28.78, w:1.53, h:0.2, videos:[], images:[], links:["new_wwrypn"]},
-  {id:"new_kiu5ev", name:"Rapscallions", era:"Wipe 8", desc:"", members:"", link:"", x:25.42, y:14.85, w:1.2, h:13.91, videos:[], images:[], links:["new_kiu5ev_wipe_7_gqh"]},
+  {id:"new_kiu5ev", name:"Rapscallions", era:"Wipe 8", desc:"", members:"", link:"", x:25.42, y:12.74, w:1.5, h:16.02, videos:[], images:[], links:["new_kiu5ev_wipe_7_gqh"]},
   {id:"new_kiu5ev_wipe_7_gqh", name:"Rapscallions", era:"Wipe 7", desc:"", members:"", link:"", x:25.39, y:28.76, w:1.2, h:3.71, videos:[], images:[], links:["new_kiu5ev"]},
   {id:"new_epcmy3", name:"Murky Sky", era:"Wipe 9", desc:"", members:"", link:"", x:68.6, y:9.19, w:1.5, h:3.3, videos:[], images:[], links:["new_epcmy3_wipe_8_gy4","new_epcmy3_wipe_7_k0u","new_epcmy3_wipe_6_j4r","new_epcmy3_wipe_5_e5e","new_epcmy3_wipe_4_qcl","new_epcmy3_wipe_3_4gd"]},
   {id:"new_epcmy3_wipe_8_gy4", name:"Murky Sky", era:"Wipe 8", desc:"", members:"", link:"", x:68.6, y:12.49, w:1.5, h:16.29, videos:[], images:[], links:["new_epcmy3","new_epcmy3_wipe_7_k0u","new_epcmy3_wipe_6_j4r","new_epcmy3_wipe_5_e5e","new_epcmy3_wipe_4_qcl","new_epcmy3_wipe_3_4gd"]},
@@ -824,8 +849,7 @@ const HOTSPOTS = [
   {id:"krob_wipe_7_i8k", name:"Krob", era:"Wipe 7", desc:"", members:"", link:"", x:41.16, y:28.78, w:2.23, h:2.47, videos:[], images:[], links:["krob"]},
   {id:"aluminati", name:"Aluminati", era:"Wipe 8", desc:"", members:"", link:"", x:61.7, y:25.23, w:1.5, h:3.55, videos:[], images:[], links:["aluminati_wipe_7_l95"]},
   {id:"aluminati_wipe_7_l95", name:"Aluminati", era:"Wipe 7", desc:"", members:"", link:"", x:61.7, y:28.78, w:1.5, h:9.21, videos:[], images:[], links:["aluminati"]},
-  {id:"beaver_dam_wipe_8_b66", name:"The Beaver Dam", era:"Wipe 8", desc:"", members:"", link:"", x:70.53, y:12.49, w:1.5, h:12.48, videos:[{"type":"youtube","embedId":"W3engpdojoM","url":"https://www.youtube.com/watch?v=W3engpdojoM&t=17s","title":"Worlds Adrift PvP - A Friend in Need... (Update 29.5)","outcome":"Partial Defeat","thumb":"https://img.youtube.com/vi/W3engpdojoM/hqdefault.jpg","opponentId":"green_pearl_wipe_8_3v1","altPerspective":false,"date":"02/17/2019"},{"type":"youtube","embedId":"mj819bAVJ24","url":"https://www.youtube.com/watch?v=mj819bAVJ24","title":"Worlds Adrift PvP - OMB","outcome":"Sunk","thumb":"https://img.youtube.com/vi/mj819bAVJ24/hqdefault.jpg","opponentId":"aliiloas_crew_wipe_8_gkf","altPerspective":false,"date":"02/03/2019"},{"type":"youtube","embedId":"9nTHll9VLAQ","url":"https://www.youtube.com/watch?v=9nTHll9VLAQ&t=27s","title":"Worlds Adrift PvP - Tower Two-Step (Update 29.5)","outcome":"Tie","thumb":"https://img.youtube.com/vi/9nTHll9VLAQ/hqdefault.jpg","opponentId":"krob","altPerspective":false,"date":"02/27/2019"},{"type":"youtube","embedId":"SOrejdS_mx0","url":"https://www.youtube.com/watch?v=SOrejdS_mx0","title":"Worlds Adrift PvP - Beaver Dam vs. Butt Pirates (Update 29.5)","outcome":"Sunk","thumb":"https://img.youtube.com/vi/SOrejdS_mx0/hqdefault.jpg","opponentId":"new_04fivs","altPerspective":false},{"type":"youtube","embedId":"FjRihpzh-fA","url":"https://www.youtube.com/watch?v=FjRihpzh-fA","title":"Worlds Adrift PvP - Beaver Dam vs. The Red Tails (Update 29.3)","outcome":"Sunk","thumb":"https://img.youtube.com/vi/FjRihpzh-fA/hqdefault.jpg","opponentId":"new_inyij5","altPerspective":false}], images:[], links:["beaver_dam_wipe_8_b66_wipe_8_5tf","beaver_dam","beaver_dam_wipe_7_yy1","beaver_dam_wipe_6_thz","beaver_dam_wipe_5_eek","beaver_dam_wipe_4_70x"]},
-  {id:"beaver_dam_wipe_8_b66_wipe_8_5tf", name:"The Beaver Dam", era:"Wipe 8", desc:"", members:"", link:"", x:70.53, y:24.97, w:1.5, h:3.81, videos:[{"type":"youtube","embedId":"XAwhge9Xt9c","url":"https://www.youtube.com/watch?v=XAwhge9Xt9c","title":"Some Beavers and Baguettes (plus bonus dive attempt)","outcome":"Partial Defeat","thumb":"https://img.youtube.com/vi/XAwhge9Xt9c/hqdefault.jpg","opponentId":"surprise_baguette","altPerspective":false,"date":"10/16/2018"},{"type":"youtube","embedId":"1JVzNi1OsSw","url":"https://www.youtube.com/watch?v=1JVzNi1OsSw&t=1959s","title":"Worlds Adrift PvP - Beaver Dam vs. \"Dirty Pirates\" - Update 27","outcome":"Tie","thumb":"https://img.youtube.com/vi/1JVzNi1OsSw/hqdefault.jpg","opponentId":"new_ti1zk5_wipe_8_jf7","altPerspective":false,"date":"10/20/2018"}], images:[], links:["beaver_dam_wipe_8_b66","beaver_dam","beaver_dam_wipe_7_yy1","beaver_dam_wipe_6_thz","beaver_dam_wipe_5_eek","beaver_dam_wipe_4_70x"]},
+  {id:"beaver_dam_wipe_8_b66", name:"The Beaver Dam", era:"Wipe 8", desc:"", members:"", link:"", x:70.53, y:12.49, w:1.5, h:16.09, videos:[{"type":"youtube","embedId":"W3engpdojoM","url":"https://www.youtube.com/watch?v=W3engpdojoM&t=17s","title":"Worlds Adrift PvP - A Friend in Need... (Update 29.5)","outcome":"Partial Defeat","thumb":"https://img.youtube.com/vi/W3engpdojoM/hqdefault.jpg","opponentId":"green_pearl_wipe_8_3v1","altPerspective":false,"date":"02/17/2019"},{"type":"youtube","embedId":"mj819bAVJ24","url":"https://www.youtube.com/watch?v=mj819bAVJ24","title":"Worlds Adrift PvP - OMB","outcome":"Sunk","thumb":"https://img.youtube.com/vi/mj819bAVJ24/hqdefault.jpg","opponentId":"aliiloas_crew_wipe_8_gkf","altPerspective":false,"date":"02/03/2019"},{"type":"youtube","embedId":"9nTHll9VLAQ","url":"https://www.youtube.com/watch?v=9nTHll9VLAQ&t=27s","title":"Worlds Adrift PvP - Tower Two-Step (Update 29.5)","outcome":"Tie","thumb":"https://img.youtube.com/vi/9nTHll9VLAQ/hqdefault.jpg","opponentId":"krob","altPerspective":false,"date":"02/27/2019"},{"type":"youtube","embedId":"SOrejdS_mx0","url":"https://www.youtube.com/watch?v=SOrejdS_mx0","title":"Worlds Adrift PvP - Beaver Dam vs. Butt Pirates (Update 29.5)","outcome":"Sunk","thumb":"https://img.youtube.com/vi/SOrejdS_mx0/hqdefault.jpg","opponentId":"new_04fivs","altPerspective":false},{"type":"youtube","embedId":"FjRihpzh-fA","url":"https://www.youtube.com/watch?v=FjRihpzh-fA","title":"Worlds Adrift PvP - Beaver Dam vs. The Red Tails (Update 29.3)","outcome":"Sunk","thumb":"https://img.youtube.com/vi/FjRihpzh-fA/hqdefault.jpg","opponentId":"new_inyij5","altPerspective":false},{"type":"youtube","embedId":"XAwhge9Xt9c","url":"https://www.youtube.com/watch?v=XAwhge9Xt9c","title":"Some Beavers and Baguettes (plus bonus dive attempt)","outcome":"Partial Defeat","thumb":"https://img.youtube.com/vi/XAwhge9Xt9c/hqdefault.jpg","opponentId":"surprise_baguette","altPerspective":false,"date":"10/16/2018"},{"type":"youtube","embedId":"1JVzNi1OsSw","url":"https://www.youtube.com/watch?v=1JVzNi1OsSw&t=1959s","title":"Worlds Adrift PvP - Beaver Dam vs. \"Dirty Pirates\" - Update 27","outcome":"Tie","thumb":"https://img.youtube.com/vi/1JVzNi1OsSw/hqdefault.jpg","opponentId":"new_ti1zk5_wipe_8_jf7","altPerspective":false,"date":"10/20/2018"}], images:[], links:["beaver_dam","beaver_dam_wipe_7_yy1","beaver_dam_wipe_6_thz","beaver_dam_wipe_5_eek","beaver_dam_wipe_4_70x"]},
   {id:"new_usd8ub", name:"Butt Pirates", era:"", desc:"", members:"", link:"", x:48.13, y:24.94, w:1.73, h:3.71, videos:[], images:[], links:[]},
   {id:"new_mne2nr", name:"Tight V-Engine Exteriors Narrow Cannon Decks", era:"", desc:"", members:"", link:"", x:21.4, y:30.86, w:3.93, h:9.9, videos:[], images:[], links:[]},
   {id:"new_wgrecj", name:"Gold Fish", era:"Wipe 8", desc:"", members:"", link:"", x:39.76, y:17.37, w:1.08, h:4.04, videos:[{"type":"youtube","embedId":"Ilv3QwPxylM","url":"https://www.youtube.com/watch?v=Ilv3QwPxylM","title":"https://www.youtube.com/watch?v=Ilv3QwPxylM","outcome":"Partial Defeat","thumb":"https://img.youtube.com/vi/Ilv3QwPxylM/hqdefault.jpg","opponentId":"krob","altPerspective":false}], images:[], links:[]},
@@ -851,9 +875,11 @@ let WIPE_LINES = [
   {id:"wl_4awb6f", label:"Wipe 5", y:43.91},
   {id:"wl_vodzr6", label:"Wipe 6", y:42.21},
   {id:"wl_jz3lx5", label:"Wipe 7", y:38.4},
-  {id:"wl_a52l58", label:"Wipe 8", y:28.78},
+  {id:"wl_a52l58", label:"Wipe 8", y:28.71},
   {id:"wl_nh7n32", label:"Wipe 9", y:12.49},
   {id:"wl_hrbfiq", label:"Soft Wipe", y:24.97},
+  {id:"wl_oovtp5", label:"WA Start", y:99.85},
+  {id:"wl_v2u2hb", label:"WA End", y:9.2},
 
 ];
 
@@ -999,6 +1025,7 @@ function buildWipeLineEl(wl){
 
 
 const stage = document.getElementById('stage');
+const stageZoomWrap = document.getElementById('stageZoomWrap');
 const ORIGINAL_HOTSPOTS = JSON.parse(JSON.stringify(HOTSPOTS));
 const ORIGINAL_WIPE_LINES = JSON.parse(JSON.stringify(WIPE_LINES));
 document.getElementById('hotspotCount').textContent = HOTSPOTS.length;
@@ -1026,15 +1053,15 @@ const zoomIndicatorPct = document.getElementById('zoomIndicatorPct');
 function applyZoom(newZoom, originXPct, originYPct){
   stageZoom = clamp(newZoom, ZOOM_MIN, ZOOM_MAX);
   if(originXPct !== undefined){
-    stage.style.transformOrigin = `${clamp(originXPct,0,100)}% ${clamp(originYPct,0,100)}%`;
+    stageZoomWrap.style.transformOrigin = `${clamp(originXPct,0,100)}% ${clamp(originYPct,0,100)}%`;
   }
-  stage.style.transform = stageZoom > 1.001 ? `scale(${stageZoom})` : '';
+  stageZoomWrap.style.transform = stageZoom > 1.001 ? `scale(${stageZoom})` : '';
   const zoomed = stageZoom > 1.001;
   zoomIndicator.style.display = zoomed ? 'flex' : 'none';
   zoomIndicatorPct.textContent = Math.round(stageZoom * 100) + '%';
 }
 
-stage.addEventListener('wheel', (e)=>{
+stageZoomWrap.addEventListener('wheel', (e)=>{
   if(!e.ctrlKey) return;
   e.preventDefault();
   const rect = stageRect();
@@ -1045,6 +1072,49 @@ stage.addEventListener('wheel', (e)=>{
 }, {passive:false});
 
 zoomIndicator.addEventListener('click', ()=> applyZoom(1, 50, 50));
+
+/* ============================================================
+   MIDDLE-MOUSE DRAG TO SCROLL — hold the middle mouse button
+   anywhere on the page and drag; the page pans so the content
+   follows the cursor (drag down to scroll up, etc), instead of
+   the browser's native click-then-release autoscroll indicator.
+============================================================ */
+let panDragging = false;
+let panStartX = 0, panStartY = 0, panStartScrollX = 0, panStartScrollY = 0;
+
+window.addEventListener('mousedown', (e)=>{
+  if(e.button !== 1) return;
+  e.preventDefault();
+  panDragging = true;
+  panStartX = e.clientX;
+  panStartY = e.clientY;
+  panStartScrollX = window.scrollX;
+  panStartScrollY = window.scrollY;
+  document.body.style.cursor = 'grabbing';
+});
+
+window.addEventListener('mousemove', (e)=>{
+  if(!panDragging) return;
+  e.preventDefault();
+  const dx = e.clientX - panStartX;
+  const dy = e.clientY - panStartY;
+  window.scrollTo(panStartScrollX - dx, panStartScrollY - dy);
+});
+
+window.addEventListener('mouseup', (e)=>{
+  if(e.button !== 1 || !panDragging) return;
+  panDragging = false;
+  document.body.style.cursor = '';
+});
+
+window.addEventListener('blur', ()=>{
+  panDragging = false;
+  document.body.style.cursor = '';
+});
+
+// Middle click would otherwise trigger the browser's native autoscroll
+// indicator or, on some platforms, open-in-new-tab / paste behavior.
+window.addEventListener('auxclick', (e)=>{ if(e.button === 1) e.preventDefault(); });
 
 function buildHotspotEl(hs){
   hs.links = hs.links || [];
@@ -1150,6 +1220,51 @@ function unlinkEverywhere(id){
 
 HOTSPOTS.forEach(buildHotspotEl);
 WIPE_LINES.forEach(buildWipeLineEl);
+
+/* ============================================================
+   FIGHT DATE LINES — "WA Start" and "WA End" wipe lines calibrate
+   the chart's y-axis against real calendar dates (2015-11-01 and
+   2019-07-31). Every video/fight entry that has a date gets its
+   own thin marker line, positioned at the y where that date falls
+   linearly between WA Start and WA End, at the x/width of its
+   hotspot. If that computed position would land outside the
+   hotspot's own y-range (bad date data, or the wipe/date mapping
+   not lining up), the marker is centered in the hotspot instead so
+   it stays visually anchored to the right crew/row.
+============================================================ */
+const WA_START_DATE = Date.UTC(2015, 10, 1);   // 2015-11-01
+const WA_END_DATE   = Date.UTC(2019, 6, 31);   // 2019-07-31
+
+function findWipeLineY(label){
+  const wl = WIPE_LINES.find(w=> w.label === label);
+  return wl ? wl.y : null;
+}
+
+function parseFightDate(str){
+  // Dates are stored as MM/DD/YYYY.
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(str || '');
+  if(!m) return null;
+  const mo = +m[1], da = +m[2], yr = +m[3];
+  return Date.UTC(yr, mo - 1, da);
+}
+
+function fightDateToY(dateMs){
+  const startY = findWipeLineY('WA Start');
+  const endY = findWipeLineY('WA End');
+  if(startY === null || endY === null) return null;
+  const frac = (dateMs - WA_START_DATE) / (WA_END_DATE - WA_START_DATE);
+  return startY + frac * (endY - startY);
+}
+
+function buildFightLines(){
+  // Intentionally disabled: fight lines are now drawn on-demand by
+  // showOpponentLinesFor() (hover-only), which reuses fightDateToY() below
+  // for the same date-based positioning. Left as a no-op rather than
+  // removed in case anything else still calls it.
+  const svg = document.getElementById('fightLinesLayer');
+  if(svg) svg.innerHTML = '';
+}
+
 
 function selectHotspot(id, div){
   document.querySelectorAll('.hotspot.selected').forEach(el=>el.classList.remove('selected'));
@@ -1417,6 +1532,7 @@ document.getElementById('importFile').addEventListener('change', (e)=>{
       });
       WIPE_LINES = wipeLines.map(wl=>({id:wl.id||('wl_'+Math.random().toString(36).slice(2,8)), label:wl.label||'Wipe', y:+wl.y}));
       WIPE_LINES.forEach(buildWipeLineEl);
+      buildFightLines();
       document.getElementById('hotspotCount').textContent = HOTSPOTS.length;
       alert(`Imported ${HOTSPOTS.length} hotspots and ${WIPE_LINES.length} wipe lines.`);
     }catch(err){
@@ -1552,6 +1668,7 @@ document.getElementById('compareMergeBtn').addEventListener('click', ()=>{
   pendingMerge.mergedHotspots.forEach(hs=>{ HOTSPOTS.push(hs); buildHotspotEl(hs); });
   WIPE_LINES = pendingMerge.mergedWipeLines;
   WIPE_LINES.forEach(buildWipeLineEl);
+  buildFightLines();
   document.getElementById('hotspotCount').textContent = HOTSPOTS.length;
   const summary = `Merged: ${pendingMerge.mergedHotspots.length} hotspots and ${pendingMerge.mergedWipeLines.length} wipe lines applied.`;
   pendingMerge = null;
@@ -1569,6 +1686,7 @@ document.getElementById('resetBtn').addEventListener('click', ()=>{
   JSON.parse(JSON.stringify(ORIGINAL_HOTSPOTS)).forEach(hs=>{ HOTSPOTS.push(hs); buildHotspotEl(hs); });
   WIPE_LINES = JSON.parse(JSON.stringify(ORIGINAL_WIPE_LINES));
   WIPE_LINES.forEach(buildWipeLineEl);
+  buildFightLines();
   document.getElementById('hotspotCount').textContent = HOTSPOTS.length;
 });
 
@@ -1655,65 +1773,77 @@ function clearHoverLines(){
 // Total fight count between two specific crews, counting videos tagged in
 // either direction (A's POV videos vs B, plus B's POV videos vs A).
 // Videos marked as an "alt perspective" of an already-counted fight are
-// excluded so the same battle isn't counted twice.
+// excluded so the same battle isn't counted twice. Used only to pick the
+// rivalry color now — line/dot size no longer scales with this.
 function countFightsBetween(hsA, hsB){
   const a = (hsA.videos||[]).filter(v=> v.opponentId === hsB.id && !v.altPerspective).length;
   const b = (hsB.videos||[]).filter(v=> v.opponentId === hsA.id && !v.altPerspective).length;
   return a + b;
 }
 
-// Every crew this hotspot has a fight relationship with — either because
-// this hotspot tagged them as an opponent, or because THEY tagged this
-// hotspot as an opponent on one of their own videos. Reciprocal, so hovering
-// either crew in the pair shows the line.
-function getAllOpponentIds(hs){
-  const ids = new Set();
-  (hs.videos||[]).forEach(v=>{ if(v.opponentId) ids.add(v.opponentId); });
-  HOTSPOTS.forEach(other=>{
-    if(other.id === hs.id) return;
-    (other.videos||[]).forEach(v=>{ if(v.opponentId === hs.id) ids.add(other.id); });
-  });
-  return [...ids];
-}
+// Fixed line/dot size — no longer proportional to fight count.
+const HOVER_LINE_W = 0.16;
+const HOVER_DOT_R = 0.45;
 
-const HOVER_LINE_MIN_W = 0.09;
-const HOVER_LINE_STEP_W = 0.055;
-const HOVER_LINE_MAX_W = 0.7;
-
-function drawHoverLine(fromHs, toHs){
-  if(!fromHs || !toHs) return;
+// Draws one fight line for a single video: the end at `hs` (the hovered
+// crew) is positioned using that video's upload date via fightDateToY(),
+// falling back to hs's own vertical center if the date is missing/unparsable
+// or lands outside hs's own box. The opponent end stays at their center.
+// Color comes from the rivalry tier between the pair; size is fixed.
+function drawFightLine(hs, opp, video){
+  if(!hs || !opp) return;
   const svg = document.getElementById('linkOverlay');
-  const x1 = fromHs.x + fromHs.w/2, y1 = fromHs.y + fromHs.h/2;
-  const x2 = toHs.x + toHs.w/2, y2 = toHs.y + toHs.h/2;
-  const fightCount = Math.max(countFightsBetween(fromHs, toHs), 1);
-  const width = Math.min(HOVER_LINE_MIN_W + (fightCount - 1) * HOVER_LINE_STEP_W, HOVER_LINE_MAX_W);
-  const tier = rivalryTier(fightCount);
+  const x1 = hs.x + hs.w/2;
+  let y1 = hs.y + hs.h/2;
+  const dateMs = parseFightDate(video && video.date);
+  if(dateMs !== null){
+    const dy = fightDateToY(dateMs);
+    if(dy !== null){
+      const lo = Math.min(hs.y, hs.y + hs.h), hi = Math.max(hs.y, hs.y + hs.h);
+      if(dy >= lo && dy <= hi) y1 = dy;
+    }
+  }
+  // Prefer a horizontal line (same y at both ends) — only angle it if the
+  // opponent's box doesn't actually span this y-position, since then a
+  // horizontal line wouldn't land on them at all.
+  const oppLo = Math.min(opp.y, opp.y + opp.h), oppHi = Math.max(opp.y, opp.y + opp.h);
+  const x2 = opp.x + opp.w/2;
+  const y2 = (y1 >= oppLo && y1 <= oppHi) ? y1 : (opp.y + opp.h/2);
+  const tier = rivalryTier(Math.max(countFightsBetween(hs, opp), 1));
 
   const line = document.createElementNS(SVGNS, 'line');
   line.setAttribute('x1', x1); line.setAttribute('y1', y1);
   line.setAttribute('x2', x2); line.setAttribute('y2', y2);
   line.setAttribute('class', 'hover-line-dyn');
   line.style.stroke = tier.color;
-  line.style.strokeWidth = width;
+  line.style.strokeWidth = HOVER_LINE_W;
   svg.appendChild(line);
 
-  [[x1,y1],[x2,y2]].forEach(([cx,cy])=>{
-    const c = document.createElementNS(SVGNS, 'circle');
-    c.setAttribute('cx', cx); c.setAttribute('cy', cy);
-    c.setAttribute('r', tier.r);
-    c.setAttribute('class', 'hover-line-dyn');
-    c.style.fill = tier.color;
-    svg.appendChild(c);
-  });
+  const dot = document.createElementNS(SVGNS, 'circle');
+  dot.setAttribute('cx', x2); dot.setAttribute('cy', y2);
+  dot.setAttribute('r', HOVER_DOT_R);
+  dot.setAttribute('class', 'hover-line-dyn');
+  dot.style.fill = tier.color;
+  svg.appendChild(dot);
 }
 
-// Draws a line (thickness + color/size by rivalry level) to every crew this
-// one has a fight relationship with, in either direction.
+// Draws a fight line (dots + rivalry color, date-positioned, hover-only) for
+// every video that connects this hotspot to an opponent — both this crew's
+// own POV videos, and any video where another crew tagged THIS one as their
+// opponent. One line per video, so multiple fights against the same rival
+// show as separate lines anchored at their own dates.
 function showOpponentLinesFor(hs){
   clearHoverLines();
-  getAllOpponentIds(hs).forEach(oid=>{
-    const target = hotspotsById[oid];
-    if(target) drawHoverLine(hs, target);
+  (hs.videos||[]).forEach(v=>{
+    if(!v.opponentId) return;
+    const opp = hotspotsById[v.opponentId];
+    if(opp) drawFightLine(hs, opp, v);
+  });
+  HOTSPOTS.forEach(other=>{
+    if(other.id === hs.id) return;
+    (other.videos||[]).forEach(v=>{
+      if(v.opponentId === hs.id) drawFightLine(hs, other, v);
+    });
   });
 }
 
@@ -2001,6 +2131,17 @@ function sortVideosByDate(videos){
     .map(e=> e.v);
 }
 
+// For a fight video (has an opponent tagged), show "Crew A vs Crew B"
+// instead of whatever title it was given. Works for both POV videos (hs is
+// the uploader, v.opponentId is the other crew) and reciprocal/enemy-POV
+// videos (v._sourceName is the uploader, and v.opponentId is hs itself).
+function matchupLabel(hs, v){
+  if(!v.opponentId) return null;
+  if(v._sourceName) return `${v._sourceName} vs ${hs.name}`;
+  const opp = hotspotsById[v.opponentId];
+  return `${hs.name} vs ${opp ? opp.name : 'Unknown crew'}`;
+}
+
 function renderVideoGrid(hs){
   panelVideos.innerHTML = '';
   const list = sortVideosByDate(activeVideoTab === 'pov' ? (hs.videos||[]) : getReciprocalVideos(hs));
@@ -2020,13 +2161,15 @@ function renderVideoGrid(hs){
     card.className = 'video-card';
     const thumbInner = v.thumb
       ? `<img src="${v.thumb}" alt="" loading="lazy" decoding="async">`
-      : `<div class="thumb-fallback">${(badgeHtml(v.type)||'Video').replace(/<[^>]+>/g,'')}</div>`;
-    const sourceLine = v._sourceName ? `<br><span style="opacity:.65;">from ${escapeHtml(v._sourceName)}</span>` : '';
+      : `<div class="thumb-fallback">Video</div>`;
+    const matchup = matchupLabel(hs, v);
+    const sourceLine = (!matchup && v._sourceName) ? `<br><span style="opacity:.65;">from ${escapeHtml(v._sourceName)}</span>` : '';
     const altBadge = v.altPerspective ? `<span class="alt-pov-badge" title="Excluded from the fight-record chart">Alt POV</span>` : '';
     const dateLine = v.date ? `<span class="video-date">${escapeHtml(v.date)}</span>` : '';
+    const titleText = matchup ? escapeHtml(matchup) : escapeHtml(v.title||'Untitled');
     card.innerHTML = `
       <div class="thumb-wrap"><div class="play-icon">▶</div>${thumbInner}</div>
-      <div class="video-title">${dateLine}${badgeHtml(v.type)}${outcomeBadgeHtml(v.outcome)}${altBadge}<br>${escapeHtml(v.title||'Untitled')}${sourceLine}</div>`;
+      <div class="video-title">${dateLine}${outcomeBadgeHtml(v.outcome)}${altBadge}<br>${titleText}${sourceLine}</div>`;
     card.querySelector('.thumb-wrap').addEventListener('click', ()=> window.open(v.url, '_blank'));
     panelVideos.appendChild(card);
   });
@@ -2085,6 +2228,8 @@ function openEditForm(hs){
   efMembers.value = hs.members || '';
   efLink.value = hs.link || '';
   refreshOpponentDatalist(hs.id, hs.era);
+  refreshCombineDatalist(hs.id);
+  document.getElementById('efCombineInput').value = '';
   renderMediaList();
   renderImageList();
   refreshLinkSelect();
@@ -2146,6 +2291,84 @@ function labelForOpponentId(id){
   return h ? opponentLabel(h) : '';
 }
 
+/* ---- Combine hotspots ---- */
+const combineNameToId = {};
+
+function refreshCombineDatalist(excludeId){
+  const datalist = document.getElementById('combineOptions');
+  datalist.innerHTML = '';
+  Object.keys(combineNameToId).forEach(k=> delete combineNameToId[k]);
+  HOTSPOTS
+    .filter(h=> h.id !== excludeId)
+    .sort((a,b)=> a.name.localeCompare(b.name))
+    .forEach(h=>{
+      const label = opponentLabel(h);
+      combineNameToId[label] = h.id;
+      const opt = document.createElement('option');
+      opt.value = label;
+      datalist.appendChild(opt);
+    });
+}
+
+function resolveCombineLabel(label){
+  return combineNameToId[label.trim()] || '';
+}
+
+// Merges `source` into `target`: unions videos/images/links, fills in
+// blank text fields, redirects every video elsewhere that tagged `source`
+// as an opponent to point at `target` instead (so fight-lines and the
+// reciprocal tab keep working), folds source's link-group into target's,
+// then deletes source entirely. target keeps its own position/size.
+function combineHotspots(source, targetId){
+  const target = hotspotsById[targetId];
+  if(!target || target.id === source.id) return;
+
+  target.videos = (target.videos||[]).concat(source.videos||[]);
+  target.images = (target.images||[]).concat(source.images||[]);
+  target.desc = [target.desc, source.desc].filter(Boolean).join('\n\n');
+  target.members = [target.members, source.members].filter(Boolean).join('\n');
+  target.link = target.link || source.link || '';
+  target.era = target.era || source.era || '';
+
+  // Redirect every video anywhere that pointed at source to point at target.
+  HOTSPOTS.forEach(h=>{
+    (h.videos||[]).forEach(v=>{
+      if(v.opponentId === source.id) v.opponentId = target.id;
+    });
+  });
+
+  // Fold source's link-group into target's, then remove source everywhere.
+  const priorGroup = [...getConnectedGroup(source.id)].filter(pid=> pid !== source.id && pid !== target.id);
+  unlinkEverywhere(source.id);
+  priorGroup.forEach(pid=>{ if(hotspotsById[pid]) mergeLinkGroups(target.id, pid); });
+
+  const idx = HOTSPOTS.findIndex(h=>h.id===source.id);
+  if(idx>-1) HOTSPOTS.splice(idx,1);
+  const div = hotspotEls[source.id];
+  if(div) div.remove();
+  delete hotspotsById[source.id];
+  delete hotspotEls[source.id];
+
+  document.getElementById('hotspotCount').textContent = HOTSPOTS.length;
+}
+
+document.getElementById('efCombineBtn').addEventListener('click', ()=>{
+  if(!currentEditHs) return;
+  const label = document.getElementById('efCombineInput').value.trim();
+  const targetId = resolveCombineLabel(label);
+  if(!targetId){
+    alert("Pick a crew from the dropdown to combine into (start typing to search).");
+    return;
+  }
+  const target = hotspotsById[targetId];
+  if(!confirm(`Merge "${currentEditHs.name}" into "${target.name}"? This box will be deleted and its videos, screenshots, description, members, and links move to "${target.name}". This can't be undone.`)) return;
+
+  const mergedName = currentEditHs.name;
+  combineHotspots(currentEditHs, targetId);
+  closeEditForm();
+  alert(`"${mergedName}" has been merged into "${target.name}".`);
+});
+
 function renderMediaList(){
   efMediaList.innerHTML = '';
   (currentEditHs.videos||[]).forEach((v, idx)=>{
@@ -2200,7 +2423,10 @@ function renderMediaList(){
     row.appendChild(altRow);
 
     row.addEventListener('mouseenter', ()=>{
-      if(v.opponentId && hotspotsById[v.opponentId]) drawHoverLine(currentEditHs, hotspotsById[v.opponentId]);
+      if(v.opponentId && hotspotsById[v.opponentId]){
+        clearHoverLines();
+        drawFightLine(currentEditHs, hotspotsById[v.opponentId], v);
+      }
     });
     row.addEventListener('mouseleave', hideHoverLine);
 
