@@ -1089,15 +1089,20 @@ let stageZoom = 1;
 const zoomIndicator = document.getElementById('zoomIndicator');
 const zoomIndicatorPct = document.getElementById('zoomIndicatorPct');
 
+let currentOriginXPct = 50, currentOriginYPct = 50;
+
 function applyZoom(newZoom, originXPct, originYPct){
   stageZoom = clamp(newZoom, ZOOM_MIN, ZOOM_MAX);
   if(originXPct !== undefined){
-    stageZoomWrap.style.transformOrigin = `${clamp(originXPct,0,100)}% ${clamp(originYPct,0,100)}%`;
+    currentOriginXPct = clamp(originXPct,0,100);
+    currentOriginYPct = clamp(originYPct,0,100);
+    stageZoomWrap.style.transformOrigin = `${currentOriginXPct}% ${currentOriginYPct}%`;
   }
   stageZoomWrap.style.transform = stageZoom > 1.001 ? `scale(${stageZoom})` : '';
   const zoomed = stageZoom > 1.001;
   zoomIndicator.style.display = zoomed ? 'flex' : 'none';
   zoomIndicatorPct.textContent = Math.round(stageZoom * 100) + '%';
+  updateMobileFocusedFightLines();
 }
 
 stageZoomWrap.addEventListener('wheel', (e)=>{
@@ -1154,6 +1159,109 @@ window.addEventListener('blur', ()=>{
 // Middle click would otherwise trigger the browser's native autoscroll
 // indicator or, on some platforms, open-in-new-tab / paste behavior.
 window.addEventListener('auxclick', (e)=>{ if(e.button === 1) e.preventDefault(); });
+
+/* ============================================================
+   MOBILE TOUCH — pinch with two fingers to zoom (anchored at the
+   pinch midpoint, same math as the desktop ctrl+wheel zoom), and
+   drag with one finger to pan (same window.scrollTo approach as
+   the desktop middle-mouse drag above). Desktop is untouched by
+   any of this — these are separate touch events, not mouse ones,
+   and editMode keeps using its own pointer-based hotspot drag/
+   resize logic, so this bails out whenever editMode is on.
+
+   A single finger that hasn't actually moved yet is left alone
+   (no preventDefault) so tapping a hotspot still opens its detail
+   panel as a normal click; only once the finger crosses a small
+   movement threshold do we treat it as a pan and swallow the
+   gesture (including the synthetic click that would otherwise
+   follow the touch).
+============================================================ */
+const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+
+const TOUCH_MOVE_THRESHOLD = 10; // px
+const MOBILE_FOCUS_ZOOM = 2.2;   // stageZoom level considered "especially zoomed in"
+let touchState = null;
+let mobileFocusedId = null;
+
+function touchDistance(a, b){ return Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY); }
+function touchMidpoint(a, b){ return {x:(a.clientX + b.clientX) / 2, y:(a.clientY + b.clientY) / 2}; }
+
+// Finds whichever hotspot's box contains the current zoom origin point
+// and, if we're zoomed in past MOBILE_FOCUS_ZOOM, shows its fight lines
+// (the same lines desktop sees on hover) — since touch has no hover
+// state, "zoomed in closely on this crew" stands in for it instead.
+function updateMobileFocusedFightLines(){
+  if(!isTouchDevice) return;
+  let next = null;
+  if(stageZoom >= MOBILE_FOCUS_ZOOM){
+    const hit = HOTSPOTS.find(hs=>{
+      const loX = Math.min(hs.x, hs.x + hs.w), hiX = Math.max(hs.x, hs.x + hs.w);
+      const loY = Math.min(hs.y, hs.y + hs.h), hiY = Math.max(hs.y, hs.y + hs.h);
+      return currentOriginXPct >= loX && currentOriginXPct <= hiX
+          && currentOriginYPct >= loY && currentOriginYPct <= hiY;
+    });
+    if(hit) next = hit.id;
+  }
+  if(next === mobileFocusedId) return;
+  mobileFocusedId = next;
+  if(next){
+    showOpponentLinesFor(hotspotsById[next]);
+  } else {
+    hideHoverLine();
+  }
+}
+
+stageZoomWrap.addEventListener('touchstart', (e)=>{
+  if(editMode) return;
+  if(e.touches.length === 1){
+    const t = e.touches[0];
+    touchState = {mode:'pan', moved:false, startX:t.clientX, startY:t.clientY,
+      startScrollX:window.scrollX, startScrollY:window.scrollY};
+  } else if(e.touches.length === 2){
+    e.preventDefault();
+    const rect = stageRect();
+    const mid = touchMidpoint(e.touches[0], e.touches[1]);
+    const originXPct = clamp(((mid.x - rect.left) / rect.width) * 100, 0, 100);
+    const originYPct = clamp(((mid.y - rect.top) / rect.height) * 100, 0, 100);
+    touchState = {mode:'pinch', startDist:touchDistance(e.touches[0], e.touches[1]),
+      startZoom:stageZoom, originXPct, originYPct};
+  }
+}, {passive:false});
+
+stageZoomWrap.addEventListener('touchmove', (e)=>{
+  if(editMode || !touchState) return;
+  if(touchState.mode === 'pan' && e.touches.length === 1){
+    const t = e.touches[0];
+    const dx = t.clientX - touchState.startX;
+    const dy = t.clientY - touchState.startY;
+    if(!touchState.moved && Math.hypot(dx, dy) < TOUCH_MOVE_THRESHOLD) return;
+    touchState.moved = true;
+    e.preventDefault();
+    window.scrollTo(touchState.startScrollX - dx, touchState.startScrollY - dy);
+  } else if(touchState.mode === 'pinch' && e.touches.length === 2){
+    e.preventDefault();
+    const dist = touchDistance(e.touches[0], e.touches[1]);
+    const factor = dist / touchState.startDist;
+    applyZoom(touchState.startZoom * factor, touchState.originXPct, touchState.originYPct);
+  }
+}, {passive:false});
+
+function endTouch(e){
+  if(editMode){ touchState = null; return; }
+  if(touchState && touchState.mode === 'pan' && touchState.moved){
+    e.preventDefault(); // swallow the tap-click that would follow a drag
+  }
+  if(e.touches.length === 0){
+    touchState = null;
+  } else if(e.touches.length === 1){
+    // Dropped from two fingers to one mid-pinch — resume as a fresh pan.
+    const t = e.touches[0];
+    touchState = {mode:'pan', moved:true, startX:t.clientX, startY:t.clientY,
+      startScrollX:window.scrollX, startScrollY:window.scrollY};
+  }
+}
+stageZoomWrap.addEventListener('touchend', endTouch, {passive:false});
+stageZoomWrap.addEventListener('touchcancel', endTouch, {passive:false});
 
 function buildHotspotEl(hs){
   hs.links = hs.links || [];
