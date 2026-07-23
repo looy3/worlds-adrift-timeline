@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Worlds Adrift Timeline — US-E/Driss</title>
 <style>
   :root{
@@ -54,7 +55,7 @@
   #stageZoomWrap{
     max-width:1500px;
     margin:0 auto;
-    transform-origin:50% 50%;
+    transform-origin:0 0;
   }
   #stage{
     position:relative;
@@ -1078,53 +1079,100 @@ function stageRect(){ return stage.getBoundingClientRect(); }
 function clamp(v, lo, hi){ return Math.min(hi, Math.max(lo, v)); }
 
 /* ============================================================
-   ZOOM — Ctrl + mouse wheel zooms the chart in/out, anchored to
-   wherever the cursor is. Plain scrolling (no Ctrl) is left alone
-   so the page still scrolls normally.
+   ZOOM & PAN — unified system for both desktop (ctrl+wheel zoom,
+   middle-mouse-drag pan) and mobile (pinch to zoom, one-finger
+   drag to pan). Zoom and pan are both expressed as a single
+   translate()+scale() transform on #stageZoomWrap, with panX/panY
+   tracked exactly in JS (never re-derived from the DOM), which
+   avoids two real bugs the previous percentage/scroll-based
+   version had:
+     1. Panning via native window.scrollTo() can never scroll to a
+        negative position, so whenever the zoom origin wasn't the
+        top-left corner, part of the zoomed image became
+        permanently unreachable — you couldn't pan to it no matter
+        how you dragged. Panning now happens via translate(), which
+        has no such floor, so every corner is reachable (clamped
+        below only so you can't drag the content completely away).
+     2. The "which crew is centered on screen" check used to read
+        a variable that was only updated by zoom gestures, so it
+        went stale as soon as you panned without also zooming.
+        It's now recomputed fresh from the live transform on every
+        pan AND zoom.
 ============================================================ */
 const ZOOM_MIN = 1;
 const ZOOM_MAX = 6;
 const ZOOM_SENSITIVITY = 0.0016;
 let stageZoom = 1;
+let panX = 0, panY = 0;
 const zoomIndicator = document.getElementById('zoomIndicator');
 const zoomIndicatorPct = document.getElementById('zoomIndicatorPct');
 
-let currentOriginXPct = 50, currentOriginYPct = 50;
-
-function applyZoom(newZoom, originXPct, originYPct){
-  stageZoom = clamp(newZoom, ZOOM_MIN, ZOOM_MAX);
-  if(originXPct !== undefined){
-    currentOriginXPct = clamp(originXPct,0,100);
-    currentOriginYPct = clamp(originYPct,0,100);
-    stageZoomWrap.style.transformOrigin = `${currentOriginXPct}% ${currentOriginYPct}%`;
-  }
-  stageZoomWrap.style.transform = stageZoom > 1.001 ? `scale(${stageZoom})` : '';
+function applyStageTransform(){
+  stageZoomWrap.style.transform = (stageZoom > 1.001 || panX || panY)
+    ? `translate(${panX}px, ${panY}px) scale(${stageZoom})`
+    : '';
   const zoomed = stageZoom > 1.001;
   zoomIndicator.style.display = zoomed ? 'flex' : 'none';
   zoomIndicatorPct.textContent = Math.round(stageZoom * 100) + '%';
+}
+
+// Keeps panX/panY within a range where you can always reach every edge of
+// the image but can't drag it completely off past its own bounds.
+function clampPan(){
+  const natW = stageZoomWrap.offsetWidth;
+  const scaledW = natW * stageZoom;
+  panX = (scaledW <= natW) ? 0 : clamp(panX, natW - scaledW, 0);
+
+  // Height has no independent scrollbar to fall back on horizontally, but
+  // vertically the page itself already scrolls through this (often very
+  // tall) chart, so pan range is bounded by one viewport-height's worth of
+  // zoom "slack" rather than the full natural image height.
+  const viewH = window.innerHeight;
+  const maxPanY = Math.max(viewH * stageZoom - viewH, 0);
+  panY = clamp(panY, -maxPanY, maxPanY);
+}
+
+// Changes zoom while keeping whatever's under (clientX, clientY) visually
+// fixed. Uses only our own tracked panX/panY/stageZoom plus the current
+// rendered rect — never accumulates drift across repeated calls.
+function zoomAtClientPoint(clientX, clientY, newZoomRaw){
+  const newZoom = clamp(newZoomRaw, ZOOM_MIN, ZOOM_MAX);
+  const rect = stageZoomWrap.getBoundingClientRect();
+  const ratio = newZoom / stageZoom;
+  panX = panX + (clientX - rect.left) * (1 - ratio);
+  panY = panY + (clientY - rect.top) * (1 - ratio);
+  stageZoom = newZoom;
+  clampPan();
+  applyStageTransform();
+  updateMobileFocusedFightLines();
+}
+
+function resetZoom(){
+  stageZoom = 1; panX = 0; panY = 0;
+  applyStageTransform();
   updateMobileFocusedFightLines();
 }
 
 stageZoomWrap.addEventListener('wheel', (e)=>{
   if(!e.ctrlKey) return;
   e.preventDefault();
-  const rect = stageRect();
-  const originXPct = ((e.clientX - rect.left) / rect.width) * 100;
-  const originYPct = ((e.clientY - rect.top) / rect.height) * 100;
   const factor = Math.exp(-e.deltaY * ZOOM_SENSITIVITY);
-  applyZoom(stageZoom * factor, originXPct, originYPct);
+  zoomAtClientPoint(e.clientX, e.clientY, stageZoom * factor);
 }, {passive:false});
 
-zoomIndicator.addEventListener('click', ()=> applyZoom(1, 50, 50));
+zoomIndicator.addEventListener('click', resetZoom);
+
+window.addEventListener('resize', ()=>{ clampPan(); applyStageTransform(); });
 
 /* ============================================================
-   MIDDLE-MOUSE DRAG TO SCROLL — hold the middle mouse button
-   anywhere on the page and drag; the page pans so the content
-   follows the cursor (drag down to scroll up, etc), instead of
-   the browser's native click-then-release autoscroll indicator.
+   MIDDLE-MOUSE DRAG TO SCROLL/PAN — hold the middle mouse button
+   anywhere and drag. At normal zoom this scrolls the page like
+   before; once zoomed in, it pans the image itself instead (via
+   the same panX/panY as touch), so desktop gets the same
+   reach-every-corner fix as mobile.
 ============================================================ */
 let panDragging = false;
-let panStartX = 0, panStartY = 0, panStartScrollX = 0, panStartScrollY = 0;
+let panStartX = 0, panStartY = 0, panStartPanX = 0, panStartPanY = 0, panStartScrollX = 0, panStartScrollY = 0;
 
 window.addEventListener('mousedown', (e)=>{
   if(e.button !== 1) return;
@@ -1132,6 +1180,8 @@ window.addEventListener('mousedown', (e)=>{
   panDragging = true;
   panStartX = e.clientX;
   panStartY = e.clientY;
+  panStartPanX = panX;
+  panStartPanY = panY;
   panStartScrollX = window.scrollX;
   panStartScrollY = window.scrollY;
   document.body.style.cursor = 'grabbing';
@@ -1142,7 +1192,15 @@ window.addEventListener('mousemove', (e)=>{
   e.preventDefault();
   const dx = e.clientX - panStartX;
   const dy = e.clientY - panStartY;
-  window.scrollTo(panStartScrollX - dx, panStartScrollY - dy);
+  if(stageZoom > 1.001){
+    panX = panStartPanX + dx;
+    panY = panStartPanY + dy;
+    clampPan();
+    applyStageTransform();
+    updateMobileFocusedFightLines();
+  } else {
+    window.scrollTo(panStartScrollX - dx, panStartScrollY - dy);
+  }
 });
 
 window.addEventListener('mouseup', (e)=>{
@@ -1162,12 +1220,14 @@ window.addEventListener('auxclick', (e)=>{ if(e.button === 1) e.preventDefault()
 
 /* ============================================================
    MOBILE TOUCH — pinch with two fingers to zoom (anchored at the
-   pinch midpoint, same math as the desktop ctrl+wheel zoom), and
-   drag with one finger to pan (same window.scrollTo approach as
-   the desktop middle-mouse drag above). Desktop is untouched by
-   any of this — these are separate touch events, not mouse ones,
-   and editMode keeps using its own pointer-based hotspot drag/
-   resize logic, so this bails out whenever editMode is on.
+   live pinch midpoint, so it naturally follows however the fingers
+   move rather than a fixed point picked at the start), and drag
+   with one finger to pan. At normal zoom, one-finger drag scrolls
+   the page as usual; once zoomed in, it pans the image via
+   panX/panY instead. Desktop mouse handling above is untouched —
+   these are separate touch events, and editMode keeps using its
+   own pointer-based hotspot drag/resize logic, so this bails out
+   whenever editMode is on.
 
    A single finger that hasn't actually moved yet is left alone
    (no preventDefault) so tapping a hotspot still opens its detail
@@ -1186,19 +1246,24 @@ let mobileFocusedId = null;
 function touchDistance(a, b){ return Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY); }
 function touchMidpoint(a, b){ return {x:(a.clientX + b.clientX) / 2, y:(a.clientY + b.clientY) / 2}; }
 
-// Finds whichever hotspot's box contains the current zoom origin point
-// and, if we're zoomed in past MOBILE_FOCUS_ZOOM, shows its fight lines
-// (the same lines desktop sees on hover) — since touch has no hover
-// state, "zoomed in closely on this crew" stands in for it instead.
+// Finds whichever hotspot's box contains the point currently at the center
+// of the viewport (recomputed fresh from the live transform every time —
+// never a stale cached value) and, if zoomed in past MOBILE_FOCUS_ZOOM,
+// shows its fight lines (the same lines desktop sees on hover) — since
+// touch has no hover state, "zoomed in closely on this crew" stands in.
 function updateMobileFocusedFightLines(){
   if(!isTouchDevice) return;
   let next = null;
   if(stageZoom >= MOBILE_FOCUS_ZOOM){
+    const rect = stageRect();
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    const originXPct = clamp(((cx - rect.left) / rect.width) * 100, 0, 100);
+    const originYPct = clamp(((cy - rect.top) / rect.height) * 100, 0, 100);
     const hit = HOTSPOTS.find(hs=>{
       const loX = Math.min(hs.x, hs.x + hs.w), hiX = Math.max(hs.x, hs.x + hs.w);
       const loY = Math.min(hs.y, hs.y + hs.h), hiY = Math.max(hs.y, hs.y + hs.h);
-      return currentOriginXPct >= loX && currentOriginXPct <= hiX
-          && currentOriginYPct >= loY && currentOriginYPct <= hiY;
+      return originXPct >= loX && originXPct <= hiX
+          && originYPct >= loY && originYPct <= hiY;
     });
     if(hit) next = hit.id;
   }
@@ -1216,15 +1281,10 @@ stageZoomWrap.addEventListener('touchstart', (e)=>{
   if(e.touches.length === 1){
     const t = e.touches[0];
     touchState = {mode:'pan', moved:false, startX:t.clientX, startY:t.clientY,
-      startScrollX:window.scrollX, startScrollY:window.scrollY};
+      startPanX:panX, startPanY:panY, startScrollX:window.scrollX, startScrollY:window.scrollY};
   } else if(e.touches.length === 2){
     e.preventDefault();
-    const rect = stageRect();
-    const mid = touchMidpoint(e.touches[0], e.touches[1]);
-    const originXPct = clamp(((mid.x - rect.left) / rect.width) * 100, 0, 100);
-    const originYPct = clamp(((mid.y - rect.top) / rect.height) * 100, 0, 100);
-    touchState = {mode:'pinch', startDist:touchDistance(e.touches[0], e.touches[1]),
-      startZoom:stageZoom, originXPct, originYPct};
+    touchState = {mode:'pinch', startDist:touchDistance(e.touches[0], e.touches[1]), startZoom:stageZoom};
   }
 }, {passive:false});
 
@@ -1237,12 +1297,21 @@ stageZoomWrap.addEventListener('touchmove', (e)=>{
     if(!touchState.moved && Math.hypot(dx, dy) < TOUCH_MOVE_THRESHOLD) return;
     touchState.moved = true;
     e.preventDefault();
-    window.scrollTo(touchState.startScrollX - dx, touchState.startScrollY - dy);
+    if(stageZoom > 1.001){
+      panX = touchState.startPanX + dx;
+      panY = touchState.startPanY + dy;
+      clampPan();
+      applyStageTransform();
+      updateMobileFocusedFightLines();
+    } else {
+      window.scrollTo(touchState.startScrollX - dx, touchState.startScrollY - dy);
+    }
   } else if(touchState.mode === 'pinch' && e.touches.length === 2){
     e.preventDefault();
     const dist = touchDistance(e.touches[0], e.touches[1]);
     const factor = dist / touchState.startDist;
-    applyZoom(touchState.startZoom * factor, touchState.originXPct, touchState.originYPct);
+    const mid = touchMidpoint(e.touches[0], e.touches[1]);
+    zoomAtClientPoint(mid.x, mid.y, touchState.startZoom * factor);
   }
 }, {passive:false});
 
@@ -1257,7 +1326,7 @@ function endTouch(e){
     // Dropped from two fingers to one mid-pinch — resume as a fresh pan.
     const t = e.touches[0];
     touchState = {mode:'pan', moved:true, startX:t.clientX, startY:t.clientY,
-      startScrollX:window.scrollX, startScrollY:window.scrollY};
+      startPanX:panX, startPanY:panY, startScrollX:window.scrollX, startScrollY:window.scrollY};
   }
 }
 stageZoomWrap.addEventListener('touchend', endTouch, {passive:false});
